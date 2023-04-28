@@ -1,7 +1,7 @@
 # Redirection
 
 ## Jump to:
-[grep](https://github.com/anesta95/how_to_data_journalism/bash/redirection.md#grep)
+[grep](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/redirection.md#grep)
 
 ## grep
 Search text files for specific character sequences.
@@ -32,5 +32,5 @@ Combining `head` and `grep` with a pipe allows you to chain commands, and the `-
 head -1 ./*/*|grep -B1 'Hospital overall rating' > variable.txt
 ```
 
-[▲ BACK TO NAV](https://github.com/anesta95/how_to_data_journalism/bash/redirection.md#jump-to)
+[▲ BACK TO NAV](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/redirection.md#jump-to)
 
