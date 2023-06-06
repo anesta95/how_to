@@ -1,7 +1,7 @@
-# Redirection
+# Networking
 
 ## Jump to:
-[wget](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#wget) | [ssh](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#ssh)
+[wget](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#wget) | [ssh](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#ssh) | [ping](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#ping) | [traceroute](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#traceroute) | [ip](https://github.com/anesta95/how_to_data_journalism/blob/main/bash/networking.md#ip)
 
 ## wget
 
