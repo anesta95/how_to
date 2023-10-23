@@ -131,4 +131,104 @@ mtcars %>% select(!all_of(vars))
 
 ## How-tos
 
+### User-supplied data
+
+If you check the documentation you'll see that `.data` never uses data masking or tidy select. That means you don't need to do anything special in your function:
+
+```{r}
+mutate_y <- function(data) {
+  mutate(data, y = a + x)
+}
+```
+
+## One or more user-supplied expressions
+
+If you want the user to supply an expression that's passed onto an arguement which uses data masking _or_ tidy select, embrace the arguement:
+
+```{r}
+my_summarize <- function(data, group_var) {
+  data %>%
+    group_by({{ group_var }}) %>%
+    summarize(mean = mean(mass))
+}
+```
+
+This generalizes in a straightforward way if you want to use one user-supplied expression in multiple places:
+```{r}
+my_summarize2 <- function(data, expr) {
+  data %>%
+    summarize(
+      mean = mean({{ expr }}),
+      sum = sum({{ expr }}),
+      n = n()
+    )
+}
+```
+
+If you want the user to provide multiple expressions, embrace each of them: 
+```{r}
+my_summarize3 <- function(data, mean_var, sd_var) {
+  data %>%
+    summarize(
+      mean = mean({{ mean_var }}),
+      sd = sd({{ sd_var }})
+    )
+}
+```
+
+If you want to use the name of a variable in the output, you can embrace the variable name on the left-hand side of `:=` with `{{}}`:
+```{r}
+my_summarise4 <- function(data, expr) {
+  data %>% summarize(
+    "mean_{{expr}}" := mean({{ expr }}),
+    "sum_{{expr}}" := sum({{ expr }}),
+    "n_{{expr}}" := n()
+  )
+}
+my_summarise5 <- function(data, mean_var, sd_var) {
+  data %>% 
+    summarize(
+      "mean_{{mean_var}}" := mean({{ mean_var }}), 
+      "sd_{{sd_var}}" := sd({{ sd_var }})
+    )
+}
+```
+
+## Any number of user-supplied expressions
+If you want to take an arbitrary number of user supplied expressions, use `...`. This is most often userful when you want to give the user full control over
+a single part of the pipeline, like `group_by()` or a `mutate()`.
+
+```{r}
+my_summarize <- function(.data, ...) {
+  .data %>%
+    group_by(...) %>%
+    summarize(mass = mean(mass, na.rm = TRUE), height = mean(height, na.rm = TRUE))
+}
+
+starwars %>% my_summarize(homeworld)
+
+starwars %>% my_summarize(sex, gender)
+```
+
+When you use `...` in this way, make sure that any other arguements start with `.` to reduce the chances of arguement clashes; see https://design.tidyverse.org/dots-prefix.html for more details.
+
+## Creating multiple columns
+
+Sometimes it can be useful for a single expression to return multiple columns. You can do this by returning an unnamed data frame:
+
+```{r}
+quantile_df <- function(x, probs = c(0.25, 0.5, 0.75)) {
+  tibble(
+    val = quantile(x, probs),
+    quant = probs
+  )
+}
+
+x <- 1:5
+quantile_df(x)
+```
+
+This sort of function is useful inside `summarize()` and `mutate()` which allow you to add multiple columns by returning a data frame:
+
+
 
