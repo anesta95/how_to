@@ -310,4 +310,4 @@ mtcars %>%
   purrr::map(~count(mtcars, .data[[.x]]))
 ```
 
-(Note that the x in .data[[x]] is always treated as an env-variable; it will never come from the data.)
+(Note that the `x` in `.data[[x]]` is always treated as an env-variable; it will never come from the data.)
