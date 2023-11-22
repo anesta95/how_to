@@ -20,6 +20,7 @@ dplyr also supports databases via the dbplyr package, once you’ve installed, r
 To explore the basic data manipulation verbs of dplyr, we’ll use the dataset `starwars`. This dataset contains 87 characters and comes from the [Star Wars API](https://swapi.dev/), and is documented in `?starwars`
 
 ```{r}
+library(library)
 dim(starwars)
 starwars
 ```
@@ -130,3 +131,179 @@ You can rename variables with `select()` by using named arguements:
 But because `select()` drops all the variables not explicitly mentioned, it’s not that useful. Instead, use `rename()`:
 
 ```{r} starwars %>% rename(home_world = homeworld)```
+
+### Add new columns with `mutate()`
+
+Besides selecting sets of existing columns, it's often useful to add new columns that are functions of existing columns. This is the job of `mutate()`:
+
+```{r} starwars %>% mutate(height_m = height / 100)```
+
+We can't see the height in meters we just calculated, but we can fix that using a select command.
+
+```{r}
+starwars %>%
+    mutate(height_m = height / 100) %>%
+    select(height_m, height, everything())
+```
+
+`dplyr::mutate()` is similar to the base `transform()`, but allows you to refer to columns that you've just created:
+
+```{r}
+starwars %>%
+    mutate(
+        height_m = height / 100,
+        BMI = mass / (height_m^2)
+    ) %>%
+    select(BMI, everything())
+```
+
+If you only want to keep the new variables, use `.keep = "none"`:
+
+```{r}
+starwars %>%
+    mutate(
+        height_m = height / 100,
+        BMI = mass / (height_m ^ 2),
+        .keep = "none"
+    )
+```
+
+### Change column order with `relocate()`
+
+Use a similar syntax as `select()` to move blocks of columns at once
+
+```{r} starwars %>% relocate(sex:homeworld, .before = height)```
+
+### Summarize values with `summarize()`
+
+The last verb is `summarize()`. It collapses a data frame to a single row.
+
+```{r} starwars %>% summarize(height = mean(height, na.rm = T))```
+
+It's not that useful until we learn the `group_by()` verb below.
+
+### Commonalities
+
+You may have noticed that the syntax and function of all these verbs are very similar:
+
+* The first argument is a data frame.
+* The subsequent arguments describe what to do with the data frame. You can refer to columns in the data frame directly without using `$`.
+* The result is a new data frame.
+
+Together these properties make it easy to chain together multiple steps to achieve a complex result.
+
+These five functions provide the basis of a language of data manipulation. At the most basic level, you can only alter a tidy data frame in five useful ways: you can reorder the rows (`arrange()`), pick observations and variables of interest (`filter()` and `select()`), add new variables that are functions of existing variables (`mutate()`), or collapse many values to a summary (`summarize()`).
+
+## Combining functions with %>%
+
+The dplyr API is functional in the sense that function calls don't have side-effects. You must always save their results. This doesn't lead to particularly elegant code, especially if you want to do many operations at once. You either have to do it step-by-step:
+
+```{r}
+a1 <- group_by(starwars, species, sex)
+a2 <- select(a1, height, mass)
+a3 <- summarise(a2,
+  height = mean(height, na.rm = TRUE),
+  mass = mean(mass, na.rm = TRUE)
+) 
+```
+
+Or if you don't want to name the intermediate results, you need to wrap the function calls inside of each other:
+
+```{r}
+summarize(
+  select(
+    group_by(starwars, species, sex),
+    height, mass
+  ),
+  height = mean(height, na.rm = TRUE),
+  mass = mean(mass, na.rm = TRUE)
+)
+```
+
+This is difficult to read because the order of operations is from inside to out. Thus, the arguements are a long way away from the function. To get around this problem, dplyr provides the `%>%` operator from magrittr. `x %>% f(y)` turns into `f(x, y)` so you can use it to rewrite multiple operations that you can read left-to-right, top-to-bottom (reading the pipe operator as "then"):
+
+```{r}
+starwars %>%
+  group_by(species, sex) %>%
+  select(height, mass) %>%
+  summarize(
+    height = mean(height, na.rm = TRUE),
+    mass = mean(mass, na.rm = TRUE)
+  )
+```
+
+## Patterns of operations
+The dplyr verbs can be classified by the type of operations they accomplish (we sometimes speak of their **semantics**, i.e., their meanings). It's helpful to have a good grasp of the difference between select and mutate operations.
+
+### Selecting operations
+
+One of the appealing features of dplyr is that you can refer to columns from the tibble as if they were regular variables. However, the syntatic uniformity of referring to bare column names hides the semantical differences across all verbs. A column symbol supplied to `select()` does not have the same meaning as the same symbol supplied to `mutate()`.
+
+Selecting operations expect column names and positions. Hence, when you call `select()` with bare variable names, they actually represent their own positions in the tibble. The following calls are completely equivalent from dplyr's point of view:
+
+```{r}
+`name` represents the integer 1
+select(starwars, name)
+select(starwars, 1)
+```
+
+By the same token, this means that you cannot refer to variables from the surrounding context if they have the same name as one of the columns. In the following example, `height` still represents 2, not 5:
+
+```{r}
+height <- 5
+select(starwars, height)
+```
+
+One useful subtlety is that this only applies to bare names and to selecting calls `c(height, mass)` or `height:mass`. In all other cases, the columns of the data frame are not put in scope. This allows you to refer to contextual variables in selection helpers:
+
+```{r}
+name <- "color"
+select(starwars, ends_with(name))
+```
+
+These semantics are usually intuitive. But note the subtle difference:
+
+```{r}
+name <- 5
+select(starwars, name, identity(name))
+```
+
+In the first arguement, `name` represents its own position `1`. In the second arguement, `name` is evaluated in the surrounding context and represents the fifth column.
+
+For a long time, `select()` used to only understand column positions. Counting from dplyr 0.6, it now understands column names as well. This makes it a bit easier to program with `select()`:
+
+```{r}
+vars <- c("name", "height")
+select(starwars, all_of(vars), "mass")
+```
+
+### Mutating operations
+
+Mutating semantics are quite different from selection semantics. Whereas `select()` expects column names or positions, `mutate()` expects _column vectors_. We will set up a smaller tibble to use for our examples.
+
+```{r} df <- starwars %>% select(name, height, mass)```
+
+When we use `select()`, the bare column names stand for their own positions in the tibble. For `mutate()` on the other hand, column symbols represent the actual column vectors stored in the tibble. Consider what happens if we give a string or a number to `mutate()`:
+
+```{r} mutate(df, "height", 2)```
+
+`mutate()` gets length-1 vectors that it interprets as new columns in the data frame. These vectors are recycled so they match the number of rows. That's why it doesn't make sense to supply expressions like `"height" + 10` to `mutate()`. This amounts to adding 10 to a string! The corect expression is:
+
+```{r} mutate(df, height + 10)```
+
+In the same way, you can unquote values from the context if these values represent a valid column. They must be either length 1 (they then get recycled) or have the same length as the number of rows. In the following example we create a new vector that we add to the data frame:
+
+```{r}
+var <- seq(1, nrow(df))
+mutate(df, new = var)
+```
+A case in point is `group_by()`. While you might think it has select semantics, it actually has mutate semantics. This is quite handy as it allows to group by a modified column:
+
+```{r} 
+group_by(starwars, sex)
+group_by(starwars, sex = as.factor(sex))
+group_by(starwars, height_binned = cut(height, 3))
+```
+This is why you can't supply a column name to `group_by()`. This amounts to creating a new column containing the string recycled to the number of rows:
+
+```{r} group_by(df, "month")```
