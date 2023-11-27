@@ -1,0 +1,106 @@
+# [Grouped data](https://dplyr.tidyverse.org/articles/grouping.html)
+
+dplyr verbs are particularly powerful when you apply them to grouped data frames (`grouped_df` objects). This vignette shows you:
+
+* How to group, inspect, and ungroup with `group_by()` and friends.
+* How individual dplyr verbs changes their behavior when applied to grouped data frame.
+* How to access data about the "current" group from within a verb.
+
+We'll start by loading dplyr:
+
+```{r} library(dplyr)```
+
+## `group_by()`
+
+The most important is `group_by()`: it takes a data frame and one or more variables to group by:
+
+```{r}
+by_species <- starwars %>% group_by(species)
+by_sex_gender <- starwars %>% group_by(sex, gender)
+```
+
+You can see the grouping when you print the data:
+```{r}
+by_species
+by_sex_gender
+```
+
+Or use `tally()` to count the number of rows in each group. The `sort` arguement is useful if you want to see the largest groups up front.
+
+```{r}
+by_species %>% tally()
+by_sex_gender %>% tally(sort = TRUE)
+```
+
+As well as grouping by existing variables, you can group by any function of existing variables. This is equivalent to performing a `mutate()` **before** the `group_by()`:
+
+```{r}
+bmi_breaks <- c(0, 18.5, 25, 30, Inf)
+
+starwars %>%
+    group_by(bmi_cat = cut(mass / (height / 100)^2, breaks=bmi_breaks)) %>%
+    tally()
+```
+## Group metadata
+
+You can see underlying group data with `group_keys()`. It has one row for each group and one column for each grouping variable.
+
+```{r}
+by_species %>% group_keys()
+by_sex_gender %>% group_keys()
+```
+
+You can see which group each row belongs to with `group_indices()`:
+
+```{r} by_species %>% group_indices()```
+
+And which rows each group contains with `group_rows()`:
+
+```{r} by_species %>% group_rows() %>% head()```
+
+Use `group_vars()` if you just want the names of the grouping variables:
+
+```{r}
+by_species %>% group_vars()
+by_sex_gender %>% group_vars()
+```
+
+### Changing and adding to grouping variables
+
+If you apply `group_by()` to an already grouped dataset, it will overwrite the existing grouping variables. For example, the following code groups by `homeworld` instead of `species`:
+
+```{r}
+by_species %>%
+    group_by(homeworld) %>%
+    tally()
+```
+To **augment** the grouping, using `.add = TRUE`. For example, the following code groups by species and homeworld:
+
+```{r}
+by_species %>%
+    group_by(homeworld, .add = TRUE) %>%
+    tally()
+```
+
+### Removing grouping variables
+
+To remove all grouping variables, use `ungroup()`:
+
+```{r}
+by_species %>%
+    ungroup() %>%
+    tally()
+```
+You can also choose to selectively ungroup by listing the variables you want to remove:
+
+```{r}
+by_sex_gender %>%
+    ungroup(sex) %>%
+    tally()
+```
+
+## Verbs
+
+The following sections describe how grouping affects the main dplyr verbs.
+
+### summarize()
