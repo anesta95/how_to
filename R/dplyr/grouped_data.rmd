@@ -103,4 +103,131 @@ by_sex_gender %>%
 
 The following sections describe how grouping affects the main dplyr verbs.
 
-### summarize()
+### `summarize()`
+
+`summarize()` computes a summary for each group. This means that it starts from `group_keys()`, adding summary variables to the right hand side:
+
+```{r}
+by_species %>%
+    summarize(
+        n = n(),
+        height = mean(height, na.rm = TRUE)
+    )
+```
+
+The `.groups=` arguement controls the grouping structure of the output. The historical behavior of removing the right hand side grouping variable corresponds to `.groups = "drop_last"` without a message or `.groups = NULL` with a message (the default).
+
+```{r}
+by_sex_gender %>%
+    summarize(n = n()) %>%
+    group_vars()
+
+by_sex_gender %>%
+    summarize(n = n(), .groups = "drop_last") %>%
+    group_vars()
+```
+
+Since version 1.0.0 the groups may also be kept (`.groups = "keep"`) or dropped (`.groups = "drop"`)
+
+```{r}
+by_sex_gender %>%
+    summarize(n = n(), .groups = "keep") %>%
+    group_vars()
+
+by_sex_gender %>%
+    summarize(n = n(), .groups = "drop") %>%
+    group_vars()
+```
+
+When the output no longer have grouping variables, it becomes ungrouped (i.e. a regular tibble).
+
+### `select()`, `rename()`, and `relocate()`
+
+`rename()` and `relocate()` behave identically with grouped and ungrouped data because they only affect the name or position of existing columns. Grouped `select()` is almost identical to ungrouped select, except that it always includes the grouping variables:
+
+```{r} by_species %>% select(mass)```
+
+If you don't want the grouping variables, you'll have to first `ungroup()`. (This design is possibly a mistake, but we're stuck with it for now.)
+
+### `arrange()`
+
+Grouped `arrange()` is the same as ungrouped `arrange()`, unless you set `.by_group = TRUE`, in which case it will order first by the grouping variables.
+
+```{r}
+by_species %>%
+    arrange(desc(mass)) %>%
+    relocate(species, mass)
+
+by_species %>%
+    arrange(desc(mass), .by_group = TRUE) %>%
+    relocate(species, mass)
+```
+
+Note that second example is sorted by `species` (from the `group_by()` statement) and then by `mass` (within species).
+
+### `mutate()`
+
+In simple cases with vectorized functions, grouped and ungrouped `mutate()` give the same results. They differ when used with summary functions:
+
+```{r}
+# Subtract off global mean
+starwars %>%
+    select(name, homeworld, mass) %>%
+    mutate(standard_mass = mass - mean(mass, na.rm = TRUE))
+
+# Subtract off homeworld mean
+starwars %>%
+    select(name, homeworld, mass) %>%
+    group_by(homeworld) %>%
+    mutate(standard_mass = mass - mean(mass, na.rm = TRUE))
+```
+
+Or with window functions like `min_rank()`:
+
+```{r}
+# Overall rank
+starwars %>%
+    select(name, homeworld, height) %>%
+    mutate(rank = min_rank(height))
+
+# Rank per homeworld
+starwars %>%
+    select(name, homeworld, height) %>%
+    group_by(homeworld) %>%
+    mutate(rank = min_rank(height))
+```
+
+### `filter()`
+
+A grouped `filter()` effectively does a `mutate()` to generate a logical variable, and then only keeps the rows where the variable is `TRUE`. This means that grouped filters can be used with summary functions. For example, we can find the tallest character of each species:
+
+```{r}
+by_species %>%
+    select(name, species, height) %>%
+    filter(height == max(height))
+```
+
+You can also use `filter()` to remove entire groups. For example, the following code eliminates all groups that only have a single member:
+
+```{r}
+by_species %>%
+    filter(n() != 1) %>%
+    tally()
+```
+
+### `slice()` and friends
+`slice()` and friends (`slice_head()`, `slice_tail()`, `slice_sample()`, `slice_min()`, and `slice_max()`) select rows within a group. For example, we can select the first observation within each species:
+
+```{r}
+by_species %>%
+    relocate(species) %>%
+    slice(1)
+```
+
+Similarly, we can use `slice_min()` to select the smallest `n` values of a variable:
+
+```{r}
+by_species %>%
+    filter(!is.na(height)) %>%
+    slice_min(height, n = 2)
+```
