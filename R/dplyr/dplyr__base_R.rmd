@@ -1,0 +1,46 @@
+# [dplyr <-> base R](https://dplyr.tidyverse.org/articles/base.html)
+
+This vignette compares dplyr functions to their base R equivalents. This helps those familiar with base R understand better what dplyr does, and shows dplyr users how you might express the same ideas in base R code. We’ll start with a rough overview of the major differences, then discuss the one table verbs in more detail, followed by the two table verbs.
+
+# Overview
+
+1. The code dplyr verbs input and output data frames. This contrasts with base R functions which more frequently work with individual vectors.
+
+2. dplyr relies heavily on "non-standard evaluation" so that you don't need to use `$` to refer to columns in the "current" data frame. This behavior is inspireed by the base functions `subset()` and `transform()`.
+
+3. dplyr solutions tend to use a variety of single purpose verbs, while base R solutions typically tend to use `[` in a variety of ways, depending on the task at hand.
+
+4. Multiple dplyr verbs are often strung together into a pipeline by `%>%`. In base R, you'll typically save intermediate results to a variable that you either discard, or repeatedly overwrite.
+
+5. All dplyr verbs handle "grouped" data frames so that the code to perform a computation per-group looks very similar to code that works on a whole data frame. In base R, per-group operations tend to have varied forms.
+
+# One table verbs
+
+|  **dplyr** | **base**  |
+|---|---|
+| `arrange(df, x)`  | `df[order(x), , drop = FALSE]`  |
+| `distinct(df, x)`  | `df[!duplicated(x), , drop = FALSE]`, `unique()`  |
+| `filter(df, x)`  | `df[which(x), , drop = FALSE]`, `subset()`  |
+| `mutate(df, z = x + y)`  | `df$z <- df$x + df$y`, `transform()`  |
+| `pull(df, 1)`  | `df[[1]]`  |
+| `pull(df, x)`  |  `df$x` |
+| `rename(df, y = x)`  | `names(df)[names(df) == "x"] <- "y"`  |
+| `relocate(df, y)`  | `df[union("y", names(df))]`  |
+| `select(df, x, y)`  | `df[c("x", "y")]`, `subset()`  |
+| `select(df, starts_with("x"))`  | `df[grepl("^x", names(df))]`  |
+| `summarize(df, mean(x))`  | `mean(df$x)`, `tapply()`, `aggregate()`, `by()`  |
+| `slice(df, c(1, 2, 5))`  | `df[c(1, 2, 5), , drop = FALSE]`  |
+
+To begin, we'll load dplyr and convert `mtcars` and `iris` to tibbles so that we can easily show only abbreviated output for each operation.
+
+```{r}
+library(dplyr)
+mtcars <- as_tibble(mtcars)
+iris <- as_tibble(iris)
+```
+
+## `arrange()`: Arrange rows by variables
+
+`dplyr::arrange()` orders the rows of a data frame by the values of one or more columns:
+
+```{r} mtcars %>% arrange(cyl, disp)```
