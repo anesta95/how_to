@@ -214,3 +214,123 @@ pnl %>%
         names_pattern = "(.)(.)"
     )
 ```
+
+## Wider
+
+`pivot_wider()` is the opposite of `pivot_longer()`: it makes a dataset **wider** by increasing the number of columns and decreasing the number of rows. It's relatively rare to need `pivot_wider()` to make tidy data, but it's often useful for creating summary tables for presentation, or data in a format needed by other tools.
+
+### Capture-recapture data
+
+The `fish_encounters` dataset contributed by [Myfanwy Johnson](https://fishsciences.github.io/post/visualizing-fish-encounter-histories/), describes when fish swimming down a river are detected by automatic monitoring stations:
+
+```{r} fish_encounters```
+
+Many tools used to analyze this data need it in a form where each station is a column:
+
+```{r}
+fish_encounters %>%
+    pivot_wider(
+        names_from = station,
+        values_from = seen
+    )
+```
+
+This dataset only records when a fish was detected by the station - it doesn't record when it wasn't detected (this is common with this type of data). That means the output data is filled with `NA`s. However, in this case we know that the absence of a record means that the fish was not `seen`, so we can ask `pivot_wider()` to fill these missing values in with zeros:
+
+```{r}
+fish_encounters %>%
+    pivot_wider(
+        names_from = station,
+        values_from = seen,
+        values_fill = 0
+    )
+```
+
+### Aggregation
+
+You can also use `pivot_wider()` to perform simple aggregation. For example, take the `warpbreaks` dataset built in to base R (converted to a tibble for the better print method):
+
+```{r}
+warpbreaks <- warpbreaks %>%
+    as_tibble() %>%
+    select(wool, tension, breaks)
+warpbreaks
+```
+
+This is a designed experiment wtih nine replicates for every combination of `wool` (`A` and `B`) and `tension` (`L`, `M`, `H`):
+
+```{r}
+warpbreaks %>%
+    count(wool, tension)
+```
+
+What if we attempt to pivot the levels of `wool` into the columns?
+
+```{r}
+warpbreaks %>%
+    pivot_wider(
+        names_from = wool,
+        values_from = breaks
+    )
+```
+
+We get a warning that each cell in the output corresponds to multiple cells in the input. The default behavior producwees list-columns, which contain all the individual values. A more useful output would be summary statistics, e.g. `mean` breaks for each combination of wool and tension:
+
+```{r}
+warpbreaks %>%
+    pivot_wider(
+        names_from = wool,
+        values_from = breaks,
+        values_fn = mean
+    )
+```
+
+For more complex summary operations, I recommend summarizing before reshaping, but for simple cases it's often convenient to summarize within `pivot_wider()`.
+
+### Generate column names from multiple variables
+
+Imagine, as in [this case](https://stackoverflow.com/questions/24929954), that we have information containing the combination of product, country, and year. In tidy form it might look like this:
+
+```{r}
+production <- expand_grid(
+    product = c("A", "B"),
+    country = c("AI", "EI"),
+    year = 2000:2014
+) %>%
+    filter((product == "A" & country == "AI") | product == "B") %>%
+    mutate(production = rnorm(nrow(.)))
+
+production
+```
+
+We want to widen the data so we have one column for each combination of `product` and `country`. The key is to specify multiple variables for `names_from`:
+
+```{r}
+production %>%
+    pivot_wider(
+        names_from = c(product, country),
+        values_from = production
+    )
+```
+
+When either `names_from` or `values_from` select multiple variables, you can control how the column names in the output are constructed with `names_sep` and `names_prefix`, or the workhorse `names_glue`:
+
+```{r}
+production %>%
+    pivot_wider(
+        names_from = c(product, country),
+        values_from = production,
+        names_sep = ".",
+        names_prefix = "prod."
+    )
+
+production %>%
+    pivot_wider(
+        names_from = c(product, country),
+        values_from = production,
+        names_glue = "prod_{product}_{country}"
+    )
+```
+
+### Tidy census
+
