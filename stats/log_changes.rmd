@@ -1,5 +1,34 @@
 # Log Transformations
 
+By taking the logarithm of your data, you can reduce the range of values and make it easier to see patterns and relationships. Additionally, log transformations can help make your data more normally distributed, which is often necessary for statistical analysis. 
+
+You can use logarithmic transformation to change the dependent variable and independent variable, and counter any skewed data that may mess with your linear regression, arcsine transformation, geometric mean, negative value, or other linear relationship in your original data. By doing a logarithmic transformation on your original data distribution, you can give it a better normality assumption, making it an easier linear model to perform any statistical test one as transformed data.
+
+This is the basic logarithm function with 9 as the value and 3 as the base. The results is 2 because 9 is the square of 3.
+
+```{r} log(9, 3)```
+
+Here, the second parameter has been omitted resulting in a base of `e` producing the natural logarithm of 5.
+
+```{r} log(5)```
+
+Here, we are comparing a base 10 log of 100 with its shortcut. For both cases, the answer is 2.
+
+```{r} log(100, 10) log10(100)```
+
+Here, we have a comparison of the base 2 logarithm of 8 obtained by the basic logarithm function and by its shortcut. For both cases, the answer is 3 because 8 is 2 cubed.
+
+How to apply a log transformation to an R Vector
+
+```{r}
+v = c(100,10,5,2,1,0.5,0.1,0.05,0.01,0.001,0.0001)
+q = log(v + 1)
+q
+plot(v)
+plot(q)
+```
+
+```{r} log(8, 2) log2(8)```
 
 ## `log(x+1)` Data Transformation
 
