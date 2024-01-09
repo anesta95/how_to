@@ -334,3 +334,192 @@ production %>%
 
 ### Tidy census
 
+The `us_rent_income` dataset contains information about median income and rent for each state in the US for 2017 (from the American Community Survey, retrieved with the [tidycensus](https://walker-data.com/tidycensus/) package).
+
+```{r} us_rent_income```
+
+Here both `estimate` and `moe` are values columns, so we can supply them to `values_from`:
+
+```{r}
+us_rent_income %>%
+    pivot_wider(
+        names_from = variable,
+        values_from = c(estimate, moe)
+    )
+```
+
+Note that the name of the variable is automatically appended to the output columns.
+
+### Implicit missing values
+
+Occasionally, you'll come across data where your names variable is encoded as a factor, but not all of the data will be represented.
+
+```{r}
+weekdays <- c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+daily <- tibble(
+    day = factor(c("Tue", "Thu", "Fri", "Mon"), levels = weekdays),
+    value = c(2, 3, 1, 5)
+)
+
+daily
+```
+
+`pivot_wider()` defaults to generating columns from the values that are actually represented in the data, but you might want to include a column for each possible level in case the data changes in the future.
+
+```{r}
+daily %>%
+    pivot_wider(
+        names_from = day,
+        values_from = value
+    )
+```
+
+The `name_expand` argument will turn implicit factor levels into explicit ones, forcing them to be represented in the result. It also sorts the column names using level order, which produces more intuitive results in this case.
+
+```{r}
+daily %>%
+    pivot_wider(
+        names_from = day,
+        values_from = value,
+        names_expand = TRUE
+    )
+```
+
+If multiple `names_from` columns are provided, `names_expand` will generate a Cartesian product of all possible combinations of the `names_from` values. Notice that the following data has omitted some rows where the percentage value would be `0`.
+
+```{r}
+percentages <- tibble(
+    year = c(2018, 2019, 2020, 2020),
+    type = factor(c("A", "B", "A", "B"), levels = c("A", "B")),
+    percentage = c(100, 100, 40, 60)
+)
+
+percentages
+
+percentages %>%
+    pivot_wider(
+        names_from = c(year, type),
+        values_from = percentage,
+        names_expand = TRUE,
+        values_fill = 0
+    )
+```
+
+A related problem can occur when there are implicit missing factor levels or combinations in the `id_cols`. In this case, there are missing rows (rather than columns) that you'd like to explicitly represent. For this example, we'll modify our `daily` data with a `type` column, and pivot on that instead, keeping `day` as an id column.
+
+```{r}
+daily <- mutate(daily, type = factor(c("A", "B", "B", "A")))
+daily
+```
+
+All of our `type` levels are represented in the columns, but we are missing some rows related to the unrepresented `day` factor levels.
+
+```{r}
+daily %>%
+    pivot_wider(
+        names_from = type,
+        values_from = value,
+        values_fill = 0
+    )
+```
+
+We can use `id_expand` in the same way that we used `names_expand`, which will expand out (and sort) the implicit missing rows in the `id_cols`.
+
+```{r}
+daily %>%
+    pivot_wider(
+        names_from = type,
+        values_from = value,
+        values_fill = 0,
+        id_expand = TRUE
+    )
+```
+
+### Unused columns
+
+Imagine you've found yourself in a situation where you have columns in your data that are completely unrelated to the pivoting process, but you'd still like to retain their information somehow. For example, in `updates` we'd like to pivot on the `system` column to create one row summaries of each county's system updates.
+
+```{r}
+updates <- tibble(
+    county = c("Wake", "Wake", "Wake", "Guilford", "Guilford"),
+    date = c(as.Date("2020-01-01") + 0:2, as.Date("2020-01-03") + 0:1),
+    system = c("A", "B", "C", "A", "C"),
+    value = c(3.2, 4, 5.5, 2, 1.2)
+)
+
+updates
+```
+
+We could do that with a typical `pivot_wider()` call, but we completely lose all information about the `date` column.
+
+```{r}
+updates %>%
+    pivot_wider(
+        id_cols = county,
+        names_from = system,
+        values_from = value
+    )
+```
+
+For this example, we'd like to retain the most recent update date across all systems in a particular county. To accomplish that we can use the `unused_fn` argument, which allows us to summarize values from the columns not utilized in the pivoting process.
+
+```{r}
+updates %>%
+    pivot_wider(
+        id_cols = county,
+        names_from = system,
+        values_from = value,
+        unused_fn = list(date = max)
+    )
+
+```
+
+You can also retain the data but delay the aggregation entirely by using `list()` as the summary function.
+
+```{r}
+updates %>%
+    pivot_wider(
+        id_cols = county,
+        names_from = system,
+        values_from = value,
+        unused_fn = list(date = list)
+    )
+```
+
+### Contact list
+
+A final challenge is inspired by [Jiena Gu](https://github.com/jienagu/tidyverse_examples/blob/master/example_long_wide.R). Imagine you have a contact list that you've copied and pasted from a website:
+
+```{r}
+contacts <- tribble(
+  ~field, ~value,
+  "name", "Jiena McLellan",
+  "company", "Toyota", 
+  "name", "John Smith", 
+  "company", "google", 
+  "email", "john@google.com",
+  "name", "Huxley Ratcliffe"
+)
+```
+
+This is challenging because there's no variable that identifies which observations belong together. We can fix this by noting that every contact starts with a name, so we can create a unique id by counting every time we see "name" as the `field`:
+
+```{r}
+contacts <- contacts %>%
+    mutate(
+        person_id = cumsum(field == "name")
+    )
+```
+
+Now that we have a unique identifier for each person, we can pivot `field` and `value` into the columns:
+
+```{r}
+contacts %>%
+    pivot_wider(
+        names_from = field,
+        values_from = value
+    )
+```
+
+## Longer, then wider
