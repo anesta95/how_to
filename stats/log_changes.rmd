@@ -1,0 +1,14 @@
+# Log Transformations
+
+
+## `log(x+1)` Data Transformation
+
+[Why?](https://onbiostatistics.blogspot.com/2012/05/logx1-data-transformation.html)
+
+When performing data analysis, sometimes the data is skewed and not normally-distributed and a data transformation is needed.
+
+The `log(x + 1)` or `log(x + 0.001)`, or `log(x + 0.00001)`, and so on are ways to adjust for variables with that have zero values that you want to adjust to be normally distributed and include in the log-transformation.
+
+[Inverse Hyperbolic Sine (IHS) transformation](https://marcfbellemare.com/wordpress/12856)
+
+https://www.programmingr.com/tutorial/log-in-r/
