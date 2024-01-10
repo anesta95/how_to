@@ -523,3 +523,195 @@ contacts %>%
 ```
 
 ## Longer, then wider
+
+Some problems can't be solved by pivoting in a single direction. The examples in this section show how you might combine `pivot_longer()` and `pivot_wider()` to solve more complex problems.
+
+### World bank
+
+`world_bank_pop` contains data from the World Bank about population per country from 2000 to 2018.
+
+```{r} world_bank_pop```
+
+My goal is to produce a tidy dataset where each variable is in a column and every observation is a row. It's not obvious exactly what steps are needed yet, but I'll start with the most obvious problem: year is spread across multiple columns.
+
+```{r}
+pop2 <- world_bank_pop %>%
+    pivot_longer(
+        cols = `2000`:`2017`,
+        names_to = "year",
+        values_to = "value"
+    )
+
+pop2
+```
+
+Next we need to consider the `indicator` variable:
+
+```{r} pop2 %>% count(indicator)```
+
+Here `SP.POP.GROW` is population growth, `SP.POP.TOTL` is total population, and `SP.URB.*` are the same but only for urban areas. Let's split this up into two variables: `area` (total or urban) and the actual variable (population or growth):
+
+```{r}
+pop3 <- pop2 %>%
+    separate(col = indicator, into = c(NA, "area", "variable"), sep = "\\.")
+```
+
+Now we can complete the tidying by pivoting `variable` and `value` to make `TOTL` and `GROW` columns:
+
+```{r}
+pop3 %>%
+    pivot_wider(
+        names_from = variable,
+        values_from = value
+    )
+```
+
+### Multi-choice
+
+Based on a suggestion by [Maxime Wack](https://github.com/tidyverse/tidyr/issues/384), the final example shows how to deal with a common way of recording multiple choice data. Often you will get such data as follows:
+
+```{r}
+multi <- tribble(
+  ~id, ~choice1, ~choice2, ~choice3,
+  1, "A", "B", "C",
+  2, "C", "B",  NA,
+  3, "D",  NA,  NA,
+  4, "B", "D",  NA
+)
+```
+
+But the actual order isn't important, and you'd prefer to have the individual questions in the columns. You can achieve the desired transformation in two steps. First, you make the data longer, eliminating explicit `NA`s, and adding a column to indicate that this choice was chosen:
+
+```{r}
+multi2 <- multi %>%
+    pivot_longer(
+        cols = !id,
+        values_drop_na = TRUE
+    ) %>%
+    mutate(checked = TRUE)
+
+multi2
+```
+
+Then you make the data wider, filling in the missing observations with `FALSE`:
+
+```{r}
+multi2 %>%
+    pivot_wider(
+        id_cols = id,
+        names_from = value,
+        values_from = checked,
+        values_fill = FALSE
+    )
+```
+
+## Manual specs
+
+The arguments to `pivot_longer()` and `pivot_wider()` allow you to pivot a wide range of datasets. But the creativity that people apply to their data structures is seemingly endless, so it’s quite possible that you will encounter a dataset that you can’t immediately see how to reshape with `pivot_longer()` and `pivot_wider()`. To gain more control over pivoting, you can instead create a “spec” data frame that describes exactly how data stored in the column names becomes variables (and vice versa). This section introduces you to the spec data structure, and show you how to use it when `pivot_longer()` and `pivot_wider()` are insufficient.
+
+### Longer
+
+To see how this works, lets return to the simplest case of pivoting applied to the `relig_income` dataset. Now pivoting happens in two steps: we first create a spec object (using `build_longer_spec()`) then use that to describe the pivoting operation:
+
+```{r}
+spec <- relig_income %>%
+    build_longer_spec(
+        cols = !religion,
+        names_to = "income",
+        values_to = "count"
+    )
+
+pivot_longer_spec(relig_income, spec)
+```
+
+(This gives the same result as before, just with more code. There’s no need to use it here, it is presented as a simple example for using `spec`.)
+
+What does `spec` look like? It’s a data frame with one row for each column in the wide format version of the data that is not present in the long format, and two special columns that start with `.`:
+
+* `.name` gives the name of the column.
+* `.value` gives the name of the column that the values in the cells will go into.
+
+There is also one column in spec for each column present in the long format of the data that is not present in the wide format of the data. This corresponds to the `names_to` argument in `pivot_longer()` and `build_longer_spec()` and the `names_from` argument in `pivot_wider()` and `build_wider_spec()`. In this example, the income column is a character vector of the names of columns being pivoted.
+
+```{r}spec```
+
+### Wider
+
+Below we widen `us_rent_income` with `pivot_wider()`. The result is ok, but I think it could be improved:
+
+```{r}
+us_rent_income %>%
+    pivot_wider(
+        names_from = variable,
+        values_from = c(estimate, moe)
+    )
+```
+
+I think it would be better to have columns `income`, `rent`, `income_moe`, and `rent_moe`, which we can achieve with a manual spec. The current spec looks like this:
+
+```{r}
+spec1 <- us_rent_income %>%
+    build_wider_spec(
+        names_from = variable,
+        values_from = c(estimate, moe)
+    )
+
+spec1
+```
+
+For this case, we mutate `spec` to carefully construct the column names:
+
+```{r}
+spec2 <- spec1 %>%
+    mutate(
+        .name = paste0(variable, ifelse(.value == "moe", "_moe", ""))
+    )
+
+spec2
+```
+
+Supplying this spec to `pivot_wider()` gives us the result we're looking for:
+
+```{r}
+us_rent_income %>%
+    pivot_wider_spec(spec2)
+```
+
+### By hand
+
+Sometimes it’s not possible (or not convenient) to compute the spec, and instead it’s more convenient to construct the spec “by hand”. For example, take this `construction` data, which is lightly modified from Table 5 “completions” found [here](https://www.census.gov/construction/nrc/index.html):
+
+```{r}construction```
+
+This sort of data is not uncommon from government agencies: the column names actually belong to different variables, and here we have summaries for number of units (1, 2-4, 5+) and regions of the country (NE, NW, midwest, S, W). We can most easily describe that with a tibble:
+
+```{r}
+spec <- tribble(
+  ~.name,            ~.value, ~units,  ~region,     
+  "1 unit",          "n",     "1",     NA,          
+  "2 to 4 units",    "n",     "2-4",   NA,          
+  "5 units or more", "n",     "5+",    NA,          
+  "Northeast",       "n",     NA,      "Northeast", 
+  "Midwest",         "n",     NA,      "Midwest",   
+  "South",           "n",     NA,      "South",     
+  "West",            "n",     NA,      "West",      
+)
+```
+
+Which yields the following longer form:
+
+```{r}construction %>% pivot_longer_spec(spec)```
+
+Note that there is no overlap between the `units` and `region` variables; here the data would really be most naturally described in two independent tables.
+
+### Theory
+
+One neat property of the spec is that you need the same spec for `pivot_longer()` and `pivot_wider()`. This makes it very clear that the two operations are symmetric:
+
+```{r}
+construction %>%
+    pivot_longer_spec(spec) %>%
+    pivot_wider_spec(spec)
+```
+
+The pivoting spec allows us to be more precise about exactly how `pivot_longer(df, spec = spec)` changes the shape of `df`: it will have `nrow(df) * nrow(spec)` rows, and `ncol(df) - nrow(spec) + ncol(spec) - 2` columns.
