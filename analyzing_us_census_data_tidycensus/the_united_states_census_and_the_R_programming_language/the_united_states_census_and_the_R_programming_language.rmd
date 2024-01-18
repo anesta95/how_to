@@ -1,0 +1,79 @@
+# [1 The United States Census and the R programming language](https://walker-data.com/census-r/the-united-states-census-and-the-r-programming-language.html)
+
+## 1.1 Census data: an overview
+Before the 2010 decennial Census, 1 in 6 Americans also received the Census long form, which asked a wider range of demographic questions on income, education, language, housing, and more. The Census long form has since been replaced by the **American Community Survey**, which is now the premier source of detailed demographic information about the US population. The ACS is mailed to approximately 3.5 million households per year (representing around 3 percent of the US population), allowing for annual data updates. The Census Bureau releases two ACS datasets to the public: the **1-year ACS**, which covers areas of population 65,000 and greater, and the **5-year ACS**, which is a moving average of data over a 5-year period that covers geographies down to the Census block group. ACS data are distinct from decennial Census data in that data represent estimates rather than precise counts, and in turn are characterized by margins of error around those estimates.
+
+The Census Bureau conducts hundreds of other surveys and disseminates data on a wide range of subjects to the public. These datasets include economic and business surveys, housing surveys, international data, population estimates and projections, and much more; [a full listing is available on the Census website](https://www.census.gov/programs-surveys/surveys-programs.html).
+
+## 1.2 Census hierarchies
+Aggregate data from the decennial US Census, American Community Survey, and other Census surveys are made available to the public at different enumeration units. Enumeration units are geographies at which Census data are tabulated. They include both legal entities such as states and counties, and statistical entities that are not official jurisdictions but used to standardize data tabulation.
+
+Enumeration units represent different levels of the Census [hierarchy](https://www.census.gov/programs-surveys/geography/guidance/hierarchy.html).
+
+Each geography from Census blocks all the way up to the nation nests within its parent unit. This means that block groups are fully composed of Census blocks, Census tracts are fully composed of block groups, and so forth.
+
+## 1.3 How to find US Census data
+Users can interactively search several Census Bureau datasets (the decennial Census & ACS, along with the Economic Census, Population Estimates Program, and others), generate custom queries by geography, and download data extracts from the [Census's data download interface](data.census.gov)
+
+Users who are comfortable dealing with data in bulk and want to download the raw data will instead prefer the [US Census Bureau’s FTP site](https://www2.census.gov/programs-surveys/). This site includes a directory of Census surveys that can be navigated and downloaded.
+
+National files are very large (the full 5-year file for all geographies is over 10GB of data zipped) so users will require dedicated software and computing workflows to interact with this data.
+
+### 1.3.2 The Census API
+The [Census Application Programming Interface (API)](https://www.census.gov/data/developers/data-sets.html) has grown to provide developers programmatic access to hundres of data resources from the Census Bureau.
+
+Census APIs are characterized by an _API endpoint_, which is a base web address for a given Census dataset, and a _query_, which customizes the data returned from the API. For example, the API endpoint for the 2010 Decennial US Census is `https://api.census.gov/data/2010/dec/sf1`; an example query that requests total population data for all counties in California, `?get=P001001,NAME&for=county:*&in=state:06`, would be appended to the endpoint in a request to the Census API. The result of the query can be viewed [here](https://api.census.gov/data/2010/dec/sf1?get=P001001,NAME&for=county:*&in=state:06), returning data in JavaScript Object Notation (JSON) format
+
+Users of the Census API through these software libraries will require a [Census API key](https://api.census.gov/data/key_signup.html), which is free and fast to acquire.
+
+### 1.3.3 Third-party data distributors
+One of the most comprehensive of these resources is the University of Minnesota’s [National Historical Geographic Information System, or NHGIS](https://www.nhgis.org/), which provides access to ACS data as well as decennial Census data back to 1790.
+
+Two other recommended third-party Census data distributors are [Census Reporter](https://censusreporter.org/) and [Social Explorer](https://www.socialexplorer.com/). Census Reporter, a project based at [Northwestern University’s Knight Lab](https://knightlab.northwestern.edu/), is targeted towards journalists but offers a web interface that can help anyone explore tables available in the ACS and download ACS data. Social Explorer is a commercial product that offers both table-based and a map-based interface for exploring and visualizing Census data, and makes mapping of Census data straightfoward for users who aren’t experienced with data analysis or mapping software.
+
+## 1.4 What is R?
+
+### 1.4.3 Functions and packages
+While “official” versions of R packages are usually published to CRAN and installable with `install.packages()`, more experimental or in-development R packages may be available on [GitHub](https://github.com/) instead. These packages should be installed with the `install_github()` function in the **remotes** package, referencing both the user name and the package name.
+
+```{r}
+library(remotes)
+install_github("Shelmith-Kariuki/rKenyaCensus")
+```
+
+While most packages used in this book are available on CRAN, some are only available on GitHub and should be installed accordingly.
+
+## 1.5 Analyses using R and US Census data
+A large ecosystem of R packages exists to help analysts work with US Census data. A good summary of this ecosystem is found in Ari Lamstein and Logan Powell’s [A Guide to Working with US Census Data in R](https://rconsortium.github.io/censusguide/).
+
+### 1.5.1 Census data packages in R: a brief summary
+For users who prefer to work with the raw Census data files, the **[totalcensus](https://github.com/GL-Li/totalcensus)** package helps download Census data in bulk from the Census FTP server and loads it into R. For election analysts, the **[PL94171](https://corymccartan.com/PL94171/)** package processes and loads PL-94171 redistricting files, including the most recent data from the 2020 Census.
+
+Users who want to make more custom queries will be interested in R packages that interact with the Census APIs. The pioneering package in this area is the **[acs](https://cran.r-project.org/web/packages/acs/index.html)** package, which uses a custom interface and class system to return data extracts from various Census APIs. This package has informed a variety of other convenient Census data packages, such as **[choroplethr](https://arilamstein.com/open-source/)** which automates map production with data from the Census API. The **[censusapi](https://github.com/hrecht/censusapi)** package (Recht 2021) also offers a comprehensive interface to the hundreds of datasets available from the Census Bureau via API. The examples in this book largely focus on the tidycensus and tigris packages created by the author, which interact with several Census API endpoints and return geographic data for mapping and spatial analysis.
+
+R interfaces to third-party Census data resources have emerged as well. A good example is the [ipumsr](https://tech.popdata.org/ipumsr/) R package, which helps users interact with datasets from the Minnesota Population Center like NHGIS. The aforementioned R packages - along with R’s rich ecosystem for data analysis - have contributed to wide range of projects using Census data in a variety of fields. A few such examples are highlighted below.
+
+### 1.5.2 Health resource access
+An excellent example is censusapi developer Hannah Recht’s study of stroke care access in the Mississippi Delta and Appalachia, [published in KHN in 2021](https://kffhealthnews.org/news/article/appalachia-mississippi-delta-stroke-treatment-advanced-care-rural-access/). [Methodology](https://kffhealthnews.org/news/article/methodology-how-we-reported-on-rural-stroke-care/) & [GitHub repo](https://github.com/khnews/2021-delta-appalachia-stroke-access). R packages used in the analysis include **censusapi** for Census data, **sf** for spatial analysis, and the **tidyverse** framework for data preparation and wrangling.
+
+### 1.5.3 COVID-19 and pandemic response
+R and Census data can also be used together to generate applications to the benefit of public health initiatives. A great example of this is the [Texas COVID-19 Vaccine Tracker](https://texasvaccinetracker.com/), developed by Matt Worthington at the University of Texas LBJ School of Public Affairs.
+
+Source code for Worthington’s application [can be explored at its corresponding GitHub repository](https://github.com/utexas-lbjp-data/tx_vaccine_site). The site was built with a variety of R frameworks, including the Shiny framework for interactive dashboarding, and includes a range of static graphics, interactive graphics, and interactive maps generated from R.
+
+### 1.5.4 Politics and gerrymandering
+[Harvard University’s ALARM project](https://alarm-redist.github.io/) uses R to analyze redistricting and gerrymandering and contribute to equitable solutions. The ALARM project has developed a veritable ecosystem of R packages that incorporate Census data and make Census data accessible to redistricting analysts. This includes the **[PL94171](https://corymccartan.com/PL94171/)** package mentioned above to get 2020 redistricting data, the **[geomander](https://christophertkenny.com/geomander/)** package to prepare data for redistricting analysis, and the **[redist](https://alarm-redist.org/redist/)** package to algorithmically derive and evaluate redistricting solutions (Kenny et al. 2021). The example below, which is generated with modified code from the redist documentation, shows a basic example of potential redistricting solutions based on Census data for Iowa.
+
+### 1.5.5 Social equity research
+Census data is a core resource for a large body of research in the social sciences as it speaks directly to issues of inequality and opportunity. [Jerry Shannon’s study of dollar store geography](https://www.tandfonline.com/doi/full/10.1080/24694452.2020.1775544) uses Census data with R in a compelling way for this purpose. His analysis examines the growth of dollar stores across the United States in relationship to patterns of racial segregation in the United States. Shannon finds that dollar stores are more likely to be found nearer to predominantly Black and Latino neighborhoods as opposed to predominantly white neighborhoods, even after controlling for structural and economic characteristics of those neighborhoods. Shannon’s analysis was completed in R, and his analysis code is available in the corresponding [GitHub repository](https://github.com/jshannon75/metrodollars). The demographic analysis uses American Community Survey data obtained from NHGIS.
+
+### 1.5.6 Census data visualization
+One of my favorite projects that I have worked on is **[Mapping Immigrant America](https://personal.tcu.edu/kylewalker/immigrant-america/#11.08/41.872/-87.7436)**, an interactive map of the US foreign-born population. The map scatters dots within Census tracts to proportionally represent the residences of immigrants based on data from the American Community Survey.
+
+While version 1 of the map used a variety of tools to process the data including ArcGIS and QGIS, the data processing for version 2 was completed entirely in R, with data then uploaded to the [Mapbox Studio](https://studio.mapbox.com/) platform for hosting and visualization. The data preparation code can be viewed in the map’s [GitHub repository](https://github.com/walkerke/mb-immigrants).
+
+The map uses a dasymetric dot-density methodology implemented in R using a series of techniques covered in this book. ACS data and their corresponding Census tract boundaries were acquired using tools learned in [Chapter 2](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#an-introduction-to-tidycensus) and [Section 6.1](https://walker-data.com/census-r/mapping-census-data-with-r.html#using-geometry-in-tidycensus); areas with no population were removed from Census tracts using a spatial analysis technique covered in [Section 7.5.1](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#erasing-areas-from-census-polygons); and dots were generated for mapping using a method introduced in [Section 6.3.4.3](https://walker-data.com/census-r/mapping-census-data-with-r.html#dot-density-maps).
+
+
+
+
