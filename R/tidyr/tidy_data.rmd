@@ -161,5 +161,146 @@ Or by date and rank:
 
 ### Multiple variables stored in one column
 
+After pivoting columns, the key column is sometimes a combination of multiple underlying variable names. This happens in the `tb` (tuberculosis) dataset, shown below. This dataset comes from the World Health Organisation, and records the counts of confirmed tuberculosis cases by `country`, `year`, and demographic group. The demographic groups are broken down by `sex` (m, f) and `age` (0-14, 15-25, 25-34, 35-44, 45-54, 55-64, unknown).
 
+```{r}
+tb <- as_tibble(read.csv("tb.csv", stringsAsFactors = F))
+tb
+```
+
+First we use `pivot_longer()` to gather up the non-variable columns:
+
+```{r}
+tb2 <- tb %>%
+    pivot_longer(
+        !c(iso2, year),
+        names_to = "demo",
+        values_to = "n",
+        values_drop_na = TRUE
+    )
+
+tb2
+```
+
+Column headers in this format are often separated by a non-alphanumeric character (e.g. `.`, `-`, `_`, `:`), or have a fixed width format, like in this dataset. `separate()` makes it easy to split a compound variables into individual variables. You can either pass it a regular expression to split on (the default is to split on non-alphanumeric columns), or a vector of character positions. In this case we want to split after the first character:
+
+```{r}
+tb3 <- tb2 %>%
+    separate(demo, c("sex", "age"), 1)
+
+tb3
+```
+
+Storing the values in this form resolves a problem in the original data. We want to compare rates, not counts, which means we need to know the population. In the original format, there is no easy way to add a population variable. It has to be stored in a separate table, which makes it hard to correctly match populations to counts. In tidy form, adding variables for population and rate is easy because they’re just additional columns.
+
+In this case, we could also do the transformation in a single step by supplying multiple column names to names_to and also supplying a grouped regular expression to `names_pattern`:
+
+```{r}
+tb %>%
+    pivot_longer(
+        !c(iso2, year),
+        names_to = c("sex", "age"),
+        names_pattern = "(.)(.+)",
+        values_to = "n",
+        values_drop_na = T
+    )
+```
+
+### Variables are stored in both rows and columns
+
+The most complicated form of messy data occurs when variables are stored in both rows and columns. The code below loads daily weather data from the Global Historical Climatology Network for one weather station (MX17004) in Mexico for five months in 2010.
+
+```{r}
+weather <- as_tibble(read.csv("weather.csv", stringsAsFactors = F))
+
+weather
+```
+
+It has variables in individual columns (`id`, `year`, `month`), spread across columns (`day`, d1-d31) and across rows (`tmin`, `tmax`) (minimum and maximum temperature). Months with fewer than 31 days have structural missing values for the last day(s) of the month.
+
+To tidy this dataset we first use `pivot_longer` to gather the day columns:
+
+```{r}
+weather2 <- weather %>%
+    pivot_longer(
+        d1:d31,
+        names_to = "day",
+        values_to = "value",
+        values_drop_na = TRUE
+    )
+
+weather2
+```
+
+For presentation, I’ve dropped the missing values, making them implicit rather than explicit. This is ok because we know how many days are in each month and can easily reconstruct the explicit missing values.
+
+We’ll also do a little cleaning:
+
+```{r}
+weather3 <- weather2 %>% 
+  mutate(day = as.integer(gsub("d", "", day))) %>%
+  select(id, year, month, day, element, value)
+
+weather3
+```
+
+This dataset is mostly tidy, but the `element` column is not a variable; it stores the names of variables. (Not shown in this example are the other meteorological variables `prcp` (precipitation) and `snow` (snowfall)). Fixing this requires widening the data: `pivot_wider()` is inverse of `pivot_longer()`, pivoting element and value back out across multiple columns:
+
+```{r}
+weather3 %>%
+    pivot_wider(names_from = element, values_from = value)
+```
+
+This form is tidy: there’s one variable in each column, and each row represents one day.
+
+### Multiple types in one table
+
+Datasets often involve values collected at multiple levels, on different types of observational units. During tidying, each type of observational unit should be stored in its own table. This is closely related to the idea of database normalisation, where each fact is expressed in only one place. It’s important because otherwise inconsistencies can arise.
+
+The billboard dataset actually contains observations on two types of observational units: the song and its rank in each week. This manifests itself through the duplication of facts about the song: `artist` is repeated many times.
+
+This dataset needs to be broken down into two pieces: a song dataset which stores `artist` and `song name`, and a ranking dataset which gives the `rank` of the `song` in each `week`. We first extract a song dataset:
+
+```{r}
+song <- billboard3 %>%
+    distinct(artist, track) %>%
+    mutate(song_id = row_number())
+
+song
+```
+
+Then use that to make a `rank` dataset by replacing repeated song facts with a pointer to song details (a unique song id):
+
+```{r}
+rank <- billboard3 %>%
+    left_join(song, c("artist", "track")) %>%
+    select(song_id, date, week, rank)
+
+rank
+```
+
+You could also imagine a week dataset which would record background information about the week, maybe the total number of songs sold or similar “demographic” information.
+
+Normalization is useful for tidying and eliminating inconsistencies. However, there are few data analysis tools that work directly with relational data, so analysis usually also requires denormalization or the merging the datasets back into one table.
+
+### One type in multiple tables
+
+It’s also common to find data values about a single type of observational unit spread out over multiple tables or files. These tables and files are often split up by another variable, so that each represents a single year, person, or location. As long as the format for individual records is consistent, this is an easy problem to fix:
+
+1. Read the files into a list of tables.
+2. For each table, add a new column that records the original file name (the file name is often the value of an important variable).
+3. Combine all tables into a single table.
+
+Purrr makes this straightforward in R. The following code generates a vector of file names in a directory (`data/`) which match a regular expression (ends in `.csv`). Next we name each element of the vector with the name of the file. We do this because will preserve the names in the following step, ensuring that each row in the final data frame is labeled with its source. Finally, `map_dfr()` loops over each path, reading in the csv file and combining the results into a single data frame.
+
+```{r}
+library(purrr)
+paths <- dir("data", pattern = "\\.csv$", full.names = T)
+names(paths) <- basenames(paths)
+map(paths, read.csv, stringsAsFactors = F, .id = "filename") %>% list_rbind()
+```
+
+Once you have a single table, you can perform additional tidying as needed. An example of this type of cleaning can be found in this [GitHub repo](https://github.com/hadley/data-baby-names) which takes 129 yearly baby name tables provided by the US Social Security Administration and combines them into a single file.
+
+A more complicated situation occurs when the dataset structure changes over time. For example, the datasets may contain different variables, the same variables with different names, different file formats, or different conventions for missing values. This may require you to tidy each file to individually (or, if you’re lucky, in small groups) and then combine them once tidied. An example of this type of tidying is illustrated in this [GitHub repo](https://github.com/hadley/data-fuel-economy), which shows the tidying of epa fuel economy data for over 50,000 cars from 1978 to 2008. The raw data is available online, but each year is stored in a separate file and there are four major formats with many minor variations, making tidying this dataset a considerable challenge.
 
