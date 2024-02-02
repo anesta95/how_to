@@ -1,0 +1,20 @@
+# [2.3 Searching for variables in tidycensus](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#searching-for-variables-in-tidycensus)
+
+One additional challenge when searching for Census variables is understanding variable IDs, which are required to fetch data from the Census and ACS APIs. There are thousands of variables available across the different datasets and summary files. To make searching easier for R users, **tidycensus** offers the `load_variables()` function. This function obtains a dataset of variables from the Census Bureau website and formats it for fast searching, ideally in RStudio.
+
+The function takes two required arguments: year, which takes the year or endyear of the Census dataset or ACS sample, and dataset, which references the dataset name. An example request would look like `load_variables(year = 2020, dataset = "pl")` for variables from the 2020 Decennial Census Redistricting data.
+
+For variables from the American Community Survey, users should specify the dataset as `"acs1"` for the 1-year ACS or `"acs5"` for the 5-year ACS. If no suffix to these dataset names is specified, users will retrieve data from the ACS Detailed Tables.
+
+Variables from the ACS Data Profile, Summary Tables, and Comparison Profile are also available by appending the suffixes `/profile`, `/summary`, or `/cprofile`, respectively.
+
+For example, a user requesting variables from the 2020 5-year ACS Detailed Tables would specify `load_variables(year = 2020, dataset = "acs5")`; a request for variables from the Data Profile then would be `load_variables(year = 2020, dataset = "acs5/profile")`. In addition to these datasets, the ACS Supplemental Estimates variables can be accessed with the dataset name `"acsse"`.
+
+As this function requires processing thousands of variables from the Census Bureau which may take a few moments depending on the user’s internet connection, the user can specify `cache = TRUE` in the function call to store the data in the user’s cache directory for future access. On subsequent calls of the `load_variables()` function, `cache = TRUE` will direct the function to look in the cache directory for the variables rather than the Census website.
+
+An example of how `load_variables()` works is as follows:
+```{r}v16 <- load_variables(2016, "acs5", cache = TRUE)```
+
+The returned data frame always has three columns: `name`, which refers to the Census variable ID; `label`, which is a descriptive data label for the variable; and `concept`, which refers to the topic of the data and often corresponds to a table of Census data. For the 5-year ACS detailed tables, the returned data frame also includes a fourth column, geography, which specifies the smallest geography at which a given variable is available from the Census API. 
+
+By browsing the table in this way, users can identify the appropriate variable IDs (found in the `name` column) that can be passed to the `variables` parameter in `get_acs()` or `get_decennial()`. Users may note that the raw variable IDs in the ACS, as consumed by the API, require a suffix of `E` or `M`. **tidycensus** does not require this suffix, as it will automatically return both the estimate and margin of error for a given requested variable. Additionally, if users desire an entire table of related variables from the ACS, the user should supply the characters prior to the underscore from a variable ID to the **table** parameter.

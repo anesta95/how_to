@@ -1,0 +1,22 @@
+# [2.7 Exercises](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#exercises)
+
+1. Review the available geographies in tidycensus from the geography table in this chapter. Acquire data on median age (variable B01002_001) for a geography we have not yet used.
+
+```{r}
+csa_median_age <- get_acs(
+  geography = "combined statistical area",
+  variables = c(medage = "B01002_001"),
+  year = 2022
+)
+```
+
+2. Use the load_variables() function to find a variable that interests you that we haven’t used yet. Use get_acs() to fetch data from the 2016-2020 ACS for counties in the state where you live, where you have visited, or where you would like to visit.
+
+```{r}
+ny_doctorate_counties <- get_acs(
+  geography = "county",
+  state = "NY",
+  variables = c(num_doc = "B15003_025"),
+  year = 2022
+)
+```

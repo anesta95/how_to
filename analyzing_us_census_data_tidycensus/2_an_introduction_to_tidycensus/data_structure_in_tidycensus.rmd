@@ -1,0 +1,95 @@
+# [2.4 Data structure in tidycensus](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#searching-for-variables-in-tidycensus)
+
+Key to the design philosophy of **tidycensus** is its interpretation of tidy data. Following Wickham (2014), “tidy” data are defined as follows:
+
+1. Each observation forms a row;
+2. Each variable forms a column;
+3. Each observational unit forms a table.
+By default, **tidycensus** returns a tibble of ACS or decennial Census data in “tidy” format. For decennial Census data, this will include four columns:
+
+* `GEOID`, representing the Census ID code that uniquely identifies the geographic unit;
+
+* `NAME`, which represents a descriptive name of the unit;
+
+* `variable`, which contains information on the Census variable name corresponding to that row;
+
+* `value`, which contains the data values for each unit-variable combination. For ACS data, two columns replace the `value` column: `estimate`, which represents the ACS estimate, and `moe`, representing the margin of error around that estimate.
+
+Given the terminology used by the Census Bureau to distinguish data, it is important to provide some clarifications of nomenclature here. Census or ACS _variables_, which are specific series of data available by enumeration unit, are interpreted in tidycensus as _characteristics_ of those enumeration units. In turn, rows in datasets returned when `output = "tidy"`, which is the default setting in the `get_acs()` and `get_decennial()` functions, represent data for unique unit-variable combinations. An example of this is illustrated below with income groups by state for the 2016 1-year American Community Survey.
+
+```{r}
+hhinc <- get_acs(
+  geography = "state", 
+  table = "B19001", 
+  survey = "acs1",
+  year = 2016
+)
+```
+In this example, each row represents state-characteristic combinations, consistent with the tidy data model. Alternatively, if a user desires the variables spread across the columns of the dataset, the setting `output = "wide"` will enable this. For ACS data, estimates and margins of error for each ACS variable will be found in their own columns. For example:
+
+```{r}
+hhinc_wide <- get_acs(
+  geography = "state", 
+  table = "B19001", 
+  survey = "acs1", 
+  year = 2016,
+  output = "wide"
+)
+```
+
+The wide-form dataset includes `GEOID` and `NAME` columns, as in the tidy dataset, but is also characterized by estimate/margin of error pairs across the columns for each Census variable in the table.
+
+## 2.4.1 Understanding GEOIDs
+The `GEOID` column returned by default in **tidycensus** can be used to uniquely identify geographic units in a given dataset. For geographies within the core Census hierarchy (Census block through state, as discussed in Section 1.2), GEOIDs can be used to uniquely identify specific units as well as units’ parent geographies. Let’s take the example of households by Census block from the 2020 Census in Cimarron County, Oklahoma.
+
+```{r}
+cimarron_blocks <- get_decennial(
+  geography = "block",
+  variables = "H1_001N",
+  state = "OK",
+  county = "Cimarron",
+  year = 2020,
+  sumfile = "pl"
+)
+```
+The mapping between the `GEOID` and `NAME` columns in the returned 2020 Census block data offers some insight into how GEOIDs work for geographies within the core Census hierarchy. Take the first block in the table, Block 1110, which has a GEOID of **400259503001110**. The GEOID value breaks down as follows:
+
+* The first two digits, **40**, correspond to the [Federal Information Processing Series (FIPS) code](https://www.census.gov/library/reference/code-lists/ansi.html) for the state of Oklahoma. All states and US territories, along with other geographies at which the Census Bureau tabulates data, will have a FIPS code that can uniquely identify that geography.
+
+* Digits 3 through 5, **025**, are representative of Cimarron County. These three digits will uniquely identify Cimarron County within Oklahoma. County codes are generally combined with their corresponding state codes to uniquely identify a county within the United States, as three-digit codes will be repeated across states. Cimarron County’s code in this example would be **40025**.
+
+The next six digits, **950300**, represent the block’s Census tract. The tract name in the NAME column is Census Tract 9503; the six-digit tract ID is right-padded with zeroes.
+
+The twelfth digit, **1**, represents the parent block group of the Census block. As there are no more than nine block groups in any Census tract, the block group name will not exceed 9.
+
+The last three digits, **110**, represent the individual Census block, though these digits are combined with the parent block group digit to form the block’s name.
+
+For geographies outside the core Census hierarchy, GEOIDs will uniquely identify geographic units but will only include IDs of parent geographies to the degree to which they nest within them. For example, a geography that nests within states but may cross county boundaries like school districts will include the state GEOID in its GEOID but unique digits after that. Geographies like core-based statistical areas that do not nest within states will have fully unique GEOIDs, independent of any other geographic level of aggregation such as states.
+
+## 2.4.2 Renaming variable IDs
+Census variables IDs can be cumbersome to type and remember in the course of an R session. As such, **tidycensus** has built-in tools to automatically rename the variable IDs if requested by a user. For example, let’s say that a user is requesting data on median household income (variable ID `B19013_001`) and median age (variable ID `B01002_001`). By passing a _named_ vector to the `variables` parameter in `get_acs()` or `get_decennial()`, the functions will return the desired names rather than the Census variable IDs. Let’s examine this for counties in Georgia from the 2016-2020 five-year ACS.
+
+```{r}
+ga <- get_acs(
+  geography = "county",
+  state = "Georgia",
+  variables = c(medinc = "B19013_001",
+                medage = "B01002_001"),
+  year = 2020
+)
+```
+
+ACS variable IDs, which would be found in the `variable` column, are replaced by `medage` and `medinc`, as requested. When a wide-form dataset is requested, **tidycensus** will still append `E` and `M` to the specified column names, as illustrated below.
+
+```{r}
+ga_wide <- get_acs(
+  geography = "county",
+  state = "Georgia",
+  variables = c(medinc = "B19013_001",
+                medage = "B01002_001"),
+  output = "wide",
+  year = 2020
+)
+```
+
+Median household income for each county is represented by `medincE`, for the estimate, and `medincM`, for the margin of error. At the time of this writing, custom variable names are only available for `variables` and not for `table`, as users will not always know the number of variables found in a table beforehand.

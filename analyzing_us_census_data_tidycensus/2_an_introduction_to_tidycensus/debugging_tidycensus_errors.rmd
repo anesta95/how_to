@@ -1,0 +1,39 @@
+# [2.6 Debugging tidycensus errors](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#debugging-tidycensus-errors)
+
+At times, you may think that you’ve formatted your use of a **tidycensus** function correctly but the Census API doesn’t return the data you expected. Whenever possible, **tidycensus** carries through the error message from the Census API or translates common errors for the user. In the example below, a user has mis-typed the variable ID:
+
+```{r}
+state_pop <- get_decennial(
+  geography = "state",
+  variables = "P01001",
+  year = 2010
+)
+```
+The “unknown variable” error message from the Census API is carried through to the user. In other instances, users might request geographies that are not available in a given dataset:
+
+```{r}
+cbsa_ohio <- get_acs(
+  geography = "cbsa",
+  variables = "DP02_0068P",
+  state = "OH",
+  year = 2019
+)
+```
+
+The user above has attempted to get bachelor’s degree attainment by CBSA in Ohio from the ACS Data Profile. However, CBSA geographies are not available by state given that many CBSAs cross state boundaries. In response, the API returns an “unsupported geography hierarchy” error.
+
+To assist with debugging errors, or more generally to help users understand how **tidycensus** functions are being translated to Census API calls, **tidycensus** offers a parameter `show_call` that when set to `TRUE` prints out the actual API call that tidycensus is making to the Census API.
+
+```{r}
+cbsa_bachelors <- get_acs(
+  geography = "cbsa",
+  variables = "DP02_0068P",
+  year = 2019,
+  show_call = TRUE
+)
+```
+
+The printed URL `https://api.census.gov/data/2019/acs/acs5/profile?get=DP02_0068PE%2CDP02_0068PM%2CNAME&for=metropolitan%20statistical%20area%2Fmicropolitan%20statistical%20area%3A%2A` can be copy-pasted into a web browser where users can see the raw JSON returned by the Census API and inspect the results.
+
+A common use-case for `show_call = TRUE` is to understand what data is available from the API, especially if functions in **tidycensus** are returning NA in certain rows. If the raw API call itself contains missing values for given variables, this will confirm that the requested data are not available from the API at a given geography.
+

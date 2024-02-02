@@ -1,0 +1,82 @@
+# [2.1 Getting started with tidycensus](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#getting-started-with-tidycensus)
+
+* `get_decennial()`, which requests data from the US Decennial Census APIs for 2000, 2010, and 2020.
+
+* `get_acs()`, which requests data from the 1-year and 5-year American Community Survey samples. Data are available from the 1-year ACS back to 2005 and the 5-year ACS back to 2005-2009.
+
+* `get_estimates()`, an interface to the Population Estimates APIs. These datasets include yearly estimates of population characteristics by state, county, and metropolitan area, along with components of change demographic estimates like births, deaths, and migration rates.
+
+* `get_pums()`, which accesses data from the ACS Public Use Microdata Sample APIs. These samples include anonymized individual-level records from the ACS organized by household and are highly useful for many different social science analyses. get_pums() is covered in more depth in Chapters 9 and 10.
+
+* `get_flows()`, an interface to the ACS Migration Flows APIs. Includes information on in- and out-flows from various geographies for the 5-year ACS samples, enabling origin-destination analyses.
+
+API keys can be obtained [through the Census's website](https://api.census.gov/data/key_signup.html). After you’ve signed up for an API key, be sure to activate the key from the email you receive from the Census Bureau so it works correctly. Declaring `install = TRUE` when calling `census_api_key()` will install the key for use in future R sessions, which may be convenient for many users.
+
+```{r}
+library(tidycensus)
+# census_api_key("YOUR KEY GOES HERE", install = TRUE)
+```
+
+## 2.1.1 Decennial Census
+To get data from the decennial US Census, users must specify a string representing the requested `geography`; a vector of Census variable IDs, represented by `variable`; or optionally a Census table ID, passed to `table`. The code below gets data on total population by state from the 2010 decennial Census.
+
+```{r}
+total_population_10 <- get_decennial(
+    geography = "state",
+    variables = "P001001",
+    year = 2010
+)
+```
+
+### 2.1.1.1 Summary files in the decennial Census
+By default, `get_decennial()` uses the argument `sumfile = "sf1"`, which fetches data from the decennial Census Summary File 1. This summary file exists for the 2000 and 2010 decennial US Censuses, and includes core demographic characteristics for Census geographies. The 2000 and 2010 decennial Census data also include Summary File 2, which contains information on a range of population and housing unit characteristics and is specified as `"sf2"`. Detailed demographic information in the 2000 decennial Census such as income and occupation can be found in Summary Files 3 (`"sf3"`) and 4 (`"sf4"`). Data from the 2000 and 2010 Decennial Censuses for island territories other than Puerto Rico must be accessed at their corresponding summary files: `"as"` for American Samoa, `"mp"` for the Northern Mariana Islands, `"gu"` for Guam, and `"vi"` for the US Virgin Islands.
+
+2020 Decennial Census data are available from the PL 94-171 Redistricting summary file, which is specified with `sumfile = "pl"` and is also available for 2010. The Redistricting summary files include a limited subset of variables from the decennial US Census to be used for legislative redistricting. These variables include total population and housing units; race and ethnicity; voting-age population; and group quarters population. For example, the code below retrieves information on the American Indian & Alaska Native population by state from the 2020 decennial Census.
+
+```{r}
+aian_2020 <- get_decennial(
+  geography = "state",
+  variables = "P1_005N",
+  year = 2020,
+  sumfile = "pl"
+)
+```
+
+The 2020 decennial Census data use [differential privacy](https://www.census.gov/library/fact-sheets/2021/protecting-the-confidentiality-of-the-2020-census-redistricting-data.html) as a method to preserve confidentiality of individuals who responded to the Census. This can lead to inaccuracies in small area analyses using 2020 Census data and also can make comparisons of small counts across years difficult.
+
+### 2.1.2 American Community Survey
+The ACS includes a wide variety of variables detailing characteristics of the US population not found in the decennial Census. The example below fetches data on the number of residents born in Mexico by state.
+
+```{r}
+born_in_mexico <- get_acs(
+  geography = "state", 
+  variables = "B05006_150",
+  year = 2020
+)
+```
+If the year is not specified, `get_acs()` defaults to the most recent five-year ACS sample, which at the time of this writing is 2016-2020. The data returned is similar in structure to that returned by `get_decennial()`, but includes an `estimate` column (for the ACS estimate) and `moe` column (for the margin of error around that estimate) instead of a value column.
+
+The following code will fetch data from the 1-year ACS for 2019
+```{r}
+born_in_mexico_1yr <- get_acs(
+  geography = "state", 
+  variables = "B05006_150", 
+  survey = "acs1",
+  year = 2019
+)
+```
+
+Note the differences between the 5-year ACS estimates and the 1-year ACS estimates shown. For states with larger Mexican-born populations like Arizona, California, and Colorado, the 1-year ACS data will represent the most up-to-date estimates, albeit characterized by larger margins of error relative to their estimates. For states with smaller Mexican-born populations like Alabama, Alaska, and Arkansas, however, the estimate returns `NA`, R’s notation representing missing data. If you encounter this in your data’s `estimate` column, it will generally mean that the estimate is too small for a given geography to be deemed reliable by the Census Bureau. In this case, only the states with the largest Mexican-born populations have data available for that variable in the 1-year ACS, meaning that the 5-year ACS should be used to make full state-wise comparisons if desired.
+
+
+Variables from the ACS detailed tables, data profiles, summary tables, comparison profile, and supplemental estimates are available through **tidycensus**’s `get_acs()` function; the function will auto-detect from which dataset to look for variables based on their names. Alternatively, users can supply a table name to the table parameter in `get_acs()`; this will return data for every variable in that table. For example, to get all variables associated with table `B01001`, which covers sex broken down by age, from the 2016-2020 5-year ACS:
+
+```{r}
+age_table <- get_acs(
+  geography = "state", 
+  table = "B01001",
+  year = 2020
+)
+```
+
+To find all of the variables associated with a given ACS table, **tidycensus** downloads a dataset of variables from the Census Bureau website and looks up the variable codes for download. If the `cache_table` parameter is set to `TRUE`, the function instructs **tidycensus** to cache this dataset on the user’s computer for faster future access. This only needs to be done once per ACS or Census dataset if the user would like to specify this option.

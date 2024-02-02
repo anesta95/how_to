@@ -1,0 +1,49 @@
+# [2.5 Other Census Bureau datasets in tidycensus](https://walker-data.com/census-r/an-introduction-to-tidycensus.html#other-census-bureau-datasets-in-tidycensus)
+
+As mentioned earlier in this chapter, tidycensus does not grant access to all of the datasets available from the Census API; users should look at the censusapi package (Recht 2021) for that functionality. However, the Population Estimates and ACS Migration Flows APIs are accessible with the get_estimates() and get_flows() functions, respectively. This section includes brief examples of each.
+
+## 2.5.1 Using `get_estimates()`
+The [Population Estimates Program](https://www.census.gov/programs-surveys/popest.html), or PEP, provides yearly estimates of the US population and its components between decennial Censuses. It differs from the ACS in that it is not directly based on a dedicated survey, but rather projects forward data from the most recent decennial Census based on birth, death, and migration rates. In turn, estimates in the PEP will differ slightly from what you may see in data returned by `get_acs()`, as the estimates are produced using a different methodology.
+
+One advantage of using the PEP to retrieve data is that allows you to access the indicators used to produce the intercensal population estimates. These indicators can be specified as variables direction in the `get_estimates()` function in **tidycensus**, or requested in bulk by using the `product` argument. The products available include `"population"`, `"components"`, `"housing"`, and `"characteristics"`. For example, we can request all components of change population estimates for 2019 for a specific county:
+
+```{r}
+queens_components <- get_estimates(
+  geography = "county",
+  product = "components",
+  state = "NY",
+  county = "Queens",
+  year = 2019
+)
+```
+
+The returned variables include raw values for births and deaths (`BIRTHS` and `DEATHS`) during the previous 12 months, defined as mid-year 2018 (July 1) to mid-year 2019. Crude rates per 1000 people in Queens County are also available with `RBIRTH` and `RDEATH`. `NATURALINC`, the natural increase, then measures the number of births minus the number of deaths. Net domestic and international migration are also available as counts and rates, and the `NETMIG` variable accounts for the overall migration, domestic and international included. Alternatively, a single variable or vector of variables can be requested with the variable argument, and the `output = "wide"` argument can also be used to spread the variable names across the columns.
+
+The `product = "characteristics"` argument also has some unique options. The argument `breakdown` lets users get breakdowns of population estimates for the US, states, and counties by `"AGEGROUP"`, `"RACE"`, `"SEX"`, or `"HISP"` (Hispanic origin). If set to `TRUE`, the `breakdown_labels` argument will return informative labels for the population estimates. For example, to get population estimates by sex and Hispanic origin for metropolitan areas, we can use the following code:
+
+```{r}
+louisiana_sex_hisp <- get_estimates(
+  geography = "state",
+  product = "characteristics",
+  breakdown = c("SEX", "HISP"),
+  breakdown_labels = TRUE,
+  state = "LA",
+  year = 2019
+)
+```
+
+The `value` column gives the estimate characterized by the population labels in the `SEX` and `HISP` columns. For example, the estimated population value in 2019 for Hispanic males in Louisiana was 131,071.
+
+## 2.5.2 Using `get_flows()`
+As of version 1.0, **tidycensus** also includes support for the ACS Migration Flows API. The flows API returns information on both in- and out-migration for states, counties, and metropolitan areas. By default, the function allows for analysis of in-migrants, emigrants, and net migration for a given geography using data from a given 5-year ACS sample. In the example below, we request migration data for Honolulu County, Hawaii. In-migration for world regions is available along with out-migration and net migration for US locations.
+
+```{r}
+honolulu_migration <- get_flows(
+  geography = "county",
+  state = "HI",
+  county = "Honolulu",
+  year = 2019
+)
+```
+`get_flows()` also includes functionality for migration flow mapping; this advanced feature will be covered in Section [6.6.1](https://walker-data.com/census-r/mapping-census-data-with-r.html#mapping-migration-flows).
+
