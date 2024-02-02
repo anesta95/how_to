@@ -1,4 +1,3 @@
-
 # Function
 create_index_col <- function(vec, index_type = 100) {
   # Things this function needs to do:
