@@ -1,9 +1,11 @@
 # IPUMS Data Training Exercise: 
 # CPS Extraction and Analysis 
-# (Exercise 2 for R)
+# (Exercise 2 for R) https://assets.ipums.org/_files/exercises/ipums-cps-exercise-r-2.pdf
 
 # IPUMS Tutorials: https://www.ipums.org/support/tutorials
 # IPUMS Data Training Exercises: https://www.ipums.org/support/exercises
+# IPUMS Data and R: https://tech.popdata.org/ipumsr/articles/ipums.html
+# Introduction to the IPUMS API for R Users: https://tech.popdata.org/ipumsr/articles/ipums-api.html
 
 ## Summary
 # This exercise will use the IPUMS dataset to explore associations between parent and
@@ -34,6 +36,57 @@ ddi <- read_ipums_ddi("../../microdata/cps_00015.xml")
 data <- read_ipums_micro(ddi)
 # Or, if you downloaded the R script, the following is equivalent:
 # source("cps_00015.R")
+### Doing the same analysis but using the API ###
+con <- file(description = "../../.api_keys/ipums/cps.txt", open = "rt", blocking = F)
+IPUMS_API_KEY <- readLines(con, n = 1)
+close(con)
+
+cps_samples_df <- get_sample_info("cps", api_key = IPUMS_API_KEY)
+
+cps_ex_2_vars <- list(
+  var_spec("AGE",
+           attached_characteristics = c("spouse")
+           ),
+  var_spec("SEX",
+           attached_characteristics = c("spouse")
+  ),
+  var_spec("MARST",
+           attached_characteristics = c("spouse")
+  ),
+  var_spec("HEALTH",
+           attached_characteristics = c("spouse",
+                                       "father",
+                                       "mother")
+  ),
+  var_spec("DIFFHEAR",
+           attached_characteristics = c("spouse")
+  ),
+  var_spec("DIFFEYE",
+           attached_characteristics = c("spouse")
+  )
+)
+
+cps_ex_2_def <- define_extract_cps(
+  description = "CPS extract for Exercise 2 for R",
+  samples = c("cps2010_03s", "cps2011_03s"),
+  variables = cps_ex_2_vars
+)
+
+cps_ex_2_submitted <- submit_extract(cps_ex_2_def, api_key = IPUMS_API_KEY)
+cps_ex_2_complete <- wait_for_extract(cps_ex_2_submitted, api_key = IPUMS_API_KEY)
+
+cps_ex_2_complete$status
+cps_ex_2_num <- cps_ex_2_complete$number
+names(cps_ex_2_complete$download_links)
+
+download_extract(cps_ex_2_complete, 
+                 download_dir = "../../microdata/",
+                 api_key = IPUMS_API_KEY)
+
+ddi <- read_ipums_ddi(paste0("../../microdata/cps_000", cps_ex_2_num, ".xml"))
+
+data <- read_ipums_micro(ddi)
+
 
 # This exercise does not spend much time on the helpers to allow for translation 
 # of the way IPUMS uses labelled values to the way base R does. You can learn more
@@ -69,15 +122,15 @@ data <- data %>%
 # a. For men aged 30 and under?
 # b. For 50 and over?
 
-# All men
+# All men: 2.3 years
 data %>% 
   summarize(nm_all_married_men = weighted.mean(AGE_DIFF, ASECWT, na.rm = T))
 
-# 30 and under
+# 30 and under: -.16 years
 data %>% 
   filter(AGE <= 30) %>% 
   summarize(nm_all_married_men = weighted.mean(AGE_DIFF, ASECWT, na.rm = T))
-# 50 and over
+# 50 and over: 3.2 years
 data %>% 
   filter(AGE >= 50) %>% 
   summarize(nm_all_married_men = weighted.mean(AGE_DIFF, ASECWT, na.rm = T))

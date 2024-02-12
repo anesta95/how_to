@@ -1,9 +1,11 @@
 # IPUMS Data Training Exercise: 
 # CPS Extraction and Analysis 
-# (Exercise 1 for R)
+# (Exercise 1 for R) https://assets.ipums.org/_files/exercises/ipums-cps-exercise-r-1.pdf
 
 # IPUMS Tutorials: https://www.ipums.org/support/tutorials
 # IPUMS Data Training Exercises: https://www.ipums.org/support/exercises
+# IPUMS Data and R: https://tech.popdata.org/ipumsr/articles/ipums.html
+# Introduction to the IPUMS API for R Users: https://tech.popdata.org/ipumsr/articles/ipums-api.html
 
 ## Summary
 # This exercise will use the IPUMS dataset to explore associations between health and
@@ -35,9 +37,37 @@ data <- read_ipums_micro(ddi)
 # Or, if you downloaded the R script, the following is equivalent:
 # source("cps_00001.R")
 
+### Doing the same analysis but using the API ###
+con <- file(description = "../../.api_keys/ipums/cps.txt", open = "rt", blocking = F)
+IPUMS_API_KEY <- readLines(con, n = 1)
+close(con)
+
+cps_samples_df <- get_sample_info("cps", api_key = IPUMS_API_KEY)
+
+cps_ex_1_def <- define_extract_cps(
+  description = "CPS extract for Exercise 1 for R",
+  samples = c("cps2011_03s"),
+  variables = c("FOODSTMP", "AGE", "EMPSTAT", "AHRSWORKT", "HEALTH")
+)
+
+cps_ex_1_submitted <- submit_extract(cps_ex_1_def, api_key = IPUMS_API_KEY)
+cps_ex_1_complete <- wait_for_extract(cps_ex_1_submitted, api_key = IPUMS_API_KEY)
+
+cps_ex_1_complete$status
+cps_ex_1_num <- cps_ex_1_complete$number
+names(cps_ex_1_complete$download_links)
+
+download_extract(cps_ex_1_complete, 
+                 download_dir = "../../microdata/",
+                 api_key = IPUMS_API_KEY)
+
+ddi <- read_ipums_ddi(paste0("../../microdata/cps_000", cps_ex_1_num, ".xml"))
+
+data <- read_ipums_micro(ddi)
+
 # This exercise does not spend much time on the helpers to allow for translation 
 # of the way IPUMS uses labelled values to the way base R does. You can learn more
-# about these in the value-labes vignette in the R package. From R run command:
+# about these in the value-labels vignette in the R package. From R run command:
 # vignette("value-labels", package = "ipumsr")
 
 ## Analyzing the Sample
