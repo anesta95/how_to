@@ -1,0 +1,1 @@
+The **mean** of a set of numbers `x` is the sum of the numbers in the set divided by how many numbers are in the set: `sum(x) / length(x)`
