@@ -10,7 +10,7 @@ Consider these two data sets:
 
 $A = \{1, 13, 13, 13, 13, 25\}$ and $B = \{6, 6, 6, 14, 14, 14\}$
 
-The mean absolute deviation for both sets is the same. It may appear that the values of `A` are more spread out than the values of `B` as it has significant outliers and a range of 24 which is far bigger than range of 8 we find in set `B`. However, according to the mean absolute deviation, they have the same amount of variance.
+The mean absolute deviation for both sets is the same. It may appear that the values of `A` are more spread out than the values of `B` as it has significant outliers and a range of 24 which is far bigger than range of 8 we find in set `B`. However, according to the mean absolute deviation, they have the same amount of variance. Although the mean absolute deviation is often viewed as an intuitive way to express data dispersion, it is not highly favored because it is a biased estimator.
 
 **Median absolute deviation** is a similar kind of statistic, but rather than calculating the mean values of the absolute differences from the mean, we calculate the **median value** of the absolute difference from the median.
 

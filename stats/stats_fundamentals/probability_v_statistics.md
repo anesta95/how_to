@@ -6,7 +6,7 @@ Any statistical prediction should have some **margin of error**. That's because 
 
 For example, let's say we want to determine the number of fish in all of the lakes in the United States of America. To answer that question exactly, we would need to physically count all of the fish in every single lake. This is an impossible task. So we take a random smaller sample and use statistics to come up with an estimate and a margin of error.
 
-If we insisted on a range that covers 100% of possible errors, the range is potentially unlimited. So we pick some threshold of error we're willing to tolerate (often +/- 5%)
+If we insisted on a range that covers 100% of possible errors, the range is potentially unlimited. So we pick some threshold of error we're willing to tolerate (often +/- 5% or +/- 10%)
 
 One tool for setting the threshold is assuming multiple samples would form a **normal curve** or bell curve. This distribution is extremely popular in statistics because it applies to many real-world situations. In this distribution, the most common observation is in the center which is the mean. The majority of observations are close to the middle, and as we move to more extreme values on either side, the likelihood decreases.
 

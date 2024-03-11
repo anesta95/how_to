@@ -1,6 +1,6 @@
-Dependent variable: A dependent variable is the variable that depends on how the independent variable changes. In equations, it is usually represented with the `y`-variable and is generally graphed on the `y`-axis.
+**Dependent variable**: A dependent variable is the variable that depends on how the independent variable changes. In equations, it is usually represented with the `y`-variable and is generally graphed on the `y`-axis.
 
-Independent variable: An independent variable is the variable that is changed in a data set. In equations, it is usually represented with the `x`-variable and is generally graphed on the `x`-axis.
+**Independent variable**: An independent variable is the variable that is changed in a data set. In equations, it is usually represented with the `x`-variable and is generally graphed on the `x`-axis.
 
 When the _dependent variable_ is numeric, we can attempt to model a linear relationship between the independent and dependent variables with a **regression line** – also known as the **line of best fit**.
 A _regression line_ allows us to estimate the relationship among the variables and make predictions. While the line may not pass through all, or even any, of the data points, it can summarize the general pattern of the data. 
@@ -38,4 +38,5 @@ In fact, it's possible to create a bivariate data set with a given mean, median,
 Both statistics and graphs alone can be misleading, causing us to make misinformed decisions. When using both tools together, we are more likely to correctly interpret our data.
 
 An example, Anscombe's quartet:
+
 ![Anscombe's Quartet](../../.imgs/anscombes_quartet.png)

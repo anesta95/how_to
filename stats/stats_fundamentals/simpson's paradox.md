@@ -1,6 +1,6 @@
 **Simpson's paradox** is a surprising result that arises when we find different directions of association between small groups and overall totals. When the the results favored `Phenomenon 1` for both `Group A` and `Group B`, but when viewed together in the aggregate, the results seemed to favor `Phenomenon 2`.
 
-Population shifts within groups can account for every group's net median change declining while the overall cohort has increased over a time period, specifically when more people are moving into a higher value cohort. Simpson's paradox does not require particular distributions of the population within groups.
+Population shifts within groups can account for every group's net median change declining while the overall cohort has increased over a time period, specifically when more people are moving into a higher value cohort. _Simpson's paradox does not require particular distributions of the population within groups_.
 
 ![Explanation of distribution within groups not mattering with Simpson's Paradox](../../.imgs/simpsons_paradox_distribution_size_explanation.png)
 

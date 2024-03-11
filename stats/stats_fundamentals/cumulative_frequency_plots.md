@@ -5,3 +5,5 @@ For any `x`-value, its corresponding `y`-value tells us how many observations ar
 The `80/20` rule, developed by Vilfredo Pareto, states that in many cases about 80% of all problems can be attributed to a few important causes. This can also be applied to consumption of goods. About 80% of healthcare costs are incurred by 20% of the population.
 
 A **Pareto chart** combines a bar graph with a cumulative frequency line graph. Individual values are represented by bars that decrease in height from left to right. The cumulative frequency is represented by the line. Pareto charts are particularly useful when analyzing something's components.
+
+![pareto_chart](../../.imgs/pareto_chart.svg)
