@@ -39,7 +39,7 @@ data <- read_ipums_micro(ddi)
 
 ### Doing the same analysis but using the API ###
 # https://developer.ipums.org/
-con <- file(description = "../../.api_keys/ipums/cps.txt", open = "rt", blocking = F)
+con <- file(description = "../../.api_keys/ipums.txt", open = "rt", blocking = F)
 IPUMS_API_KEY <- readLines(con, n = 1)
 close(con)
 
