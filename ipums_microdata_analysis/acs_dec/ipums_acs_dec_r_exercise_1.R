@@ -207,4 +207,257 @@ ddi_3 <- read_ipums_ddi(paste0("../../microdata/usa_0000", usa_ex_1_3_num, ".xml
 
 data_3 <- read_ipums_micro(ddi_3)
 
+### A note on IPUMS USA and sample weighting ###
+# Many of the data samples provided by IPUMS USA are based on statistical survey
+# techniques to obtain a nationally representative sample of the population. This means that
+# persons with some characteristics are over-represented in the samples, while others are
+# underrepresented.
+# 
+# To obtain representative statistics, users should always apply IPUMS USA sample weights
+# for the population of interest (persons/households). IPUMS USA provides both person
+# (PERWT) and household—level (HHWT) sampling weights to assist users with applying a
+# consistent sampling weight procedure across data samples. While appropriate use of
+# sampling weights will produce correct point estimates (e.g., means, proportions), it is also
+# necessary to use additional statistical techniques that account for the complex sample
+# design to produce correct standard errors and statistical tests.
+# 
+# IPUMS USA has provided the variables STRATA and CLUSTER for this purpose. While
+# unnecessary for the following analytic exercises focused on mean and proportional
+# estimates, a further discussion can be found on the IPUMS USA website: ANALYSIS AND
+# VARIANCE ESTIMATION WITH IPUMS USA 
+# https://usa.ipums.org/usa/complex_survey_vars/userNotes_variance.shtml
+###
+
+## Analyze the Data
+
+# Part 1: Frequencies
+
+# Get a basic frequency of the FARM variable for selected historical years.
+# 1. On the website, find the codes page for the FARM variable and write down each
+# code value and its associated category label
+
+# Code 0 = N/A
+# Code 1 = Non-Farm
+# Code 2 = Farm
+# Code 9 = Blank/missing
+
+data_1$FARM
+
+# 2. How many people lived on farms in the US in 1860? 1960?
+data_1 %>% 
+  group_by(YEAR, FARM) %>% 
+  summarize(people = sum(PERWT))
+  
+# 1860 farm residents = 12,931,661
+# 1960 farm residents = 15,882,199
+
+# 3. What proportion of the population lived on a farm in 1860? 1960?
+
+data_1 %>% 
+  group_by(YEAR, FARM = haven::as_factor(FARM, level = "both")) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# 1860 farm residents = 47.3% of the population
+# 1960 farm residents = 8.86% of the population
+
+# Using household weights (HHTWT)
+# Suppose you were interested not in the number of people living farms, but in the number of
+# households that were farms. To get this statistic you would need to use the household
+# weight. In order to use household weight, you should be careful to select only one person
+# from each household to represent that household's characteristics (use PERNUM = 1 as
+# the subset). You will need to apply the household weight (HHWT).
+
+# 4. What proportion of households in the sample lived on farms 1940? (Hint: don't use the weight quite yet)
+data_1 %>%
+  filter(PERNUM == 1 & YEAR == 1940) %>%
+  group_by(FARM = haven::as_factor(FARM)) %>%
+  summarize(n = sum(PERNUM)) %>%
+  mutate(pct = n / sum(n))
+
+# 18.6%
+# 5. How many households were farms in 1940?
+data_1 %>%
+  filter(PERNUM == 1 & YEAR == 1940) %>%
+  group_by(FARM = haven::as_factor(FARM)) %>%
+  summarize(n = sum(HHWT))
+
+# 7,075,921
+
+# 6. What proportion of households were farms in 1940? (use the weight now)
+data_1 %>%
+  filter(PERNUM == 1 & YEAR == 1940) %>%
+  group_by(FARM = haven::as_factor(FARM)) %>%
+  summarize(n = sum(HHWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# 18.3%
+# 7. Does the sample over or under-represent farm households?
+# Slightly over-represents farm households
+
+# Part 2: Frequencies
+# This portion of the exercise uses Extract #2: Veteran and Employment Status
+
+# 8. What is the universe for EMPSTAT for this sample, and what are the codes for this variable?
+# Universe: Persons age 16+
+# Codes: 
+# Code 0 = N/A
+# Code 1 = Employed
+# Code 2 = Unemployed
+# Code 3 = Not in labor force
+# Code 9 = Unknown/Illegible
+
+# 9. Using the variable description for VETSTAT, describe the issue a researcher would
+# face if they wanted to research women serving in the armed forces from World War
+# II until the present.
+
+# "Women were first included in veteran service questions in the 1980 census." So
+# it would be difficult to accurately use this data to describe the population
+# of veterans who are women from WWII which ended in 1945.
+
+# 10. What percent of veterans and non-veterans were:
+data_2 %>% 
+  filter(YEAR == 1980) %>% 
+  group_by(VETSTAT = haven::as_factor(VETSTAT), EMPSTAT = haven::as_factor(EMPSTAT)) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# a. Employed in 1980?
+# Veterans: 76.1%
+# Non-veterans: 54.3%
+
+# b. Not part of the labor force in 1980?
+# Veterans: 20.1%
+# Non-veterans: 41.7%
+
+
+# 11. What percent of veterans and non-veterans were:
+data_2 %>% 
+  filter(YEAR == 2000) %>% 
+  group_by(VETSTAT = haven::as_factor(VETSTAT), EMPSTAT = haven::as_factor(EMPSTAT)) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# a. Employed in 2000?
+# Veterans: 54.9%
+# Non-veterans: 64.4%
+
+# b. Not part of the labor force in 2000?
+# Veterans: 42.8%
+# Non-veterans: 32.1%
+
+# 12. What could explain the difference in relative labor force participation in veterans
+# versus non-veterans between 1980 and 2000?
+
+# The population of veterans become elderly the more time passed between 
+# WWII and the Vietnam War which had drafts and thus the proportion of 
+# veterans that were outside the prime working age (25-54) increased.
+
+# Also an increase in disabled veterans, particularly with PTSD.
+
+# 13. How do relative employment rates change when non-labor force participants are 
+# excluded in 2000?
+
+data_2 %>% 
+  filter(YEAR == 2000, EMPSTAT != 3) %>% 
+  group_by(VETSTAT = haven::as_factor(VETSTAT),
+           EMPSTAT = haven::as_factor(EMPSTAT)) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# When excluding those not in the labor force, the relative employment & unemployment
+# rates are fairly similar, with ~94.7%/5.3% for non-veterans and 95.9%/4.1% for veterans.
+
+# Part 3: Advanced Exercises
+
+# This portion of the exercise uses Extract #3: Carpooling and Metropolitan Status.
+
+# 14. What are the codes for METRO and CARPOOL?
+# METRO Codes: 
+# Code 0 = Metropolitan status indeterminable (mixed)
+# Code 1 = Not in metropolitan area
+# Code 2 = (In MSA) In central/principal city
+# Code 3 = (In MSA) Not in central/principal city
+# Code 9 = (In MSA) Central/principal city status indeterminable (mixed)
+
+# CARPOOL Codes:
+# Code 0 = N/A
+# Code 1 = Drives alone
+# Code 2 = Carpools
+# Code 3 = Carpools: Shares driving
+# Code 4 = Carpools: Drives others only
+# Code 5 = Carpools: Passenger only
+
+# 15. What is a limitation of CARPOOL if you are using 2010 and 1980? How could
+# you address this limitation
+
+# The code 2 for CARPOOL was taken for the 2010 sample,
+# but 3, 4, and 5 are taken for the 1980 sample. They have different levels of 
+# detail for carpooling. A new variable could be defined to combine these codes. 
+# Collapsing three 1980 categories (3-5) into one (2) may fix this limitation. 
+
+# 16. What are the proportion of carpoolers and lone drivers NOT in the metro 
+# area, in the central city, and outside the central city in 1980? 
+# First, we’ll need to define a new variable from CARPOOL. Let’s name it “car”. 
+# If car is 0, it indicates a lone driver, if 1, it’s any form of carpooling. 
+# If 2, driving to work is not applicable.
+
+data_3 <- data_3 %>% 
+  mutate(CAR = lbl_relabel(CARPOOL,
+                           lbl(2, "Any form of carpooling") ~ .val %in% c(2, 3, 
+                                                                          4, 5)
+                           )
+         )
+
+
+unique(data_3$CAR)
+
+data_3 %>% 
+  filter(YEAR == 1980, METRO %in% c(1, 2, 3)) %>% 
+  group_by(METRO = haven::as_factor(METRO),
+           CAR = haven::as_factor(CAR)) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+##  |METRO   |% Drive Alone   |% Carpoolers   |
+##  |---|---|---|
+##  |Not in Metro Area   |24.6%   |8.5%   |
+##  |Central City   |22.7%   |7.1%   |
+##  |Outside Central City   |31.3%   |8.7%   |
+
+# 17. Does this make sense?
+
+# Yes, a higher proportion of residents in the metro area but outside
+# the central city drive alone to work which lower proportions in the central 
+# city and outside the metro area completely do. However residents
+# outside the metro area completely are just as likely to carpool as
+# those in the suburbs which are both higher than the rate for those in the
+# central city.
+
+# Yes, commuters outside the metro area or central city are
+# more likely to drive than those in the central city, for whom carpooling is not
+# applicable because they could use public transportation. Commuters outside the
+# central city might be more likely to carpool than those outside the metro area 
+# because they are likely to work within the central city and may live close to 
+# others who work in the same concentrated urban area.
+
+# 18. Do the same for 2010. What does this indicate for the trend in 
+# carpooling/driving alone over time in the U.S.?
+
+data_3 %>% 
+  filter(YEAR == 2010, METRO %in% c(1, 2, 3)) %>% 
+  group_by(METRO = haven::as_factor(METRO),
+           CAR = haven::as_factor(CAR)) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# It looks like in the intervening 30 years, residents both not in the MSA (32.6%; +8pp)
+# and in the MSA but not in the central/principal city (a.k.a. suburbs) (36.5%; +5.2pp)
+# are driving more alone to work. While carpooling for both groups has also declined 
+# to about halfed the rate it was before (~4.3% for both). Increases
+# for those driving alone in the MSA and in the central/principal city also
+# increased.
+
+# In 2010, a greater proportion of the population drove
+# alone and a smaller proportion carpooled.
 
