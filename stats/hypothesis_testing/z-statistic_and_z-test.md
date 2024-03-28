@@ -10,7 +10,7 @@ If our sample is highly improbable or “extreme” — given what we'd expect w
 
 We expect the $Z$-statistic to look something like:
 
-$\text{Z = (some measure of the distance between}\bar{X}\:and\:\mu_0) * \text{(something that grows with sample size)}$
+$\text{Z = (some measure of the distance between }\bar{X}\:and\:\mu_0) * \text{(something that grows with sample size)}$
 
 Here $\bar{X}$ is the sample mean and $\mu_0$ is the mean assuming the null hypothesis is true. In the experiment above that would be $\mu_0 = 0$.
 
