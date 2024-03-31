@@ -195,6 +195,266 @@ download_extract(usa_ex_2_2_complete,
 ddi_2 <- read_ipums_ddi(paste0("../../microdata/usa_0000", usa_ex_2_2_num, ".xml"))
 
 data_2 <- read_ipums_micro(ddi_2)
+## A note on IPUMS USA and sample weighting
+# Many of the data samples provided by IPUMS USA are based on statistical survey
+# techniques to obtain a nationally representative sample of the population. This means that
+# persons with some characteristics are over-represented in the samples, while others are
+# underrepresented.
+
+# To obtain representative statistics, users should always apply IPUMS USA sample weights
+# for the population of interest (persons/households). IPUMS USA provides both person
+# (PERWT) and household—level (HHWT) sampling weights to assist users with applying a
+# consistent sampling weight procedure across data samples. While appropriate use of
+# sampling weights will produce correct point estimates (e.g., means, proportions), many
+# researchers believe that it is also necessary to use additional statistical techniques that
+# account for the complex sample design to produce correct standard errors and statistical
+# tests.
+
+# IPUMS USA has provided the variables STRATA and CLUSTER for this purpose. While
+# unnecessary for the following analytic exercises focused on mean and proportional
+# estimates, a further discussion can be found on the IPUMS USA website: ANALYSIS AND
+# VARIANCE ESTIMATION WITH IPUMS USA
+# https://usa.ipums.org/usa/complex_survey_vars/userNotes_variance.shtml
+
+## Analyze the Data
+# Part 1: Frequencies
+
+# This part of the exercise uses Extract #1: Associations in Household Ownership.
+
+# 1. Find the codes pages on the website for the MORTGAGE variable and write down
+# the code value, and what category each code represents.
+
+# Code: 0 N\A
+# Code: 1 No, owned free and clear
+# Code: 2 Check mark on manuscript (probabably yes)
+# Code: 3 Yes, mortgaged/ deed of trust or similar debt
+# Code: 4 Yes, contract to purchase
+
+# 2. How many people **in the sample** had a mortgage or deed of trust on their home 
+# in 2010? What proportion of the sample had a mortgage?
+
+data_1 %>% 
+  group_by(MORTGAGE = haven::as_factor(MORTGAGE)) %>% 
+  summarize(n = n()) %>% 
+  mutate(pct = n / sum(n))
+
+# 3. Using weights, what **proportion of the population** had a mortgage in 2010?
+data_1 %>% 
+  group_by(MORTGAGE = haven::as_factor(MORTGAGE)) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n))
+
+## Using household weights (HHWT)
+# Suppose you were interested not in the number of people with mortgages, but in the
+# number of households that had mortgages. To get this statistic you would need to use the
+# household weight (HHWT) and select only one person (filter using PERNUM = 1) from
+# each household to represent that household's characteristics.
+
+# 4. What proportion of households in the sample had a mortgage? What proportion 
+# **of the sample** owned their home?
+
+data_1 %>% 
+  filter(PERNUM == 1) %>% 
+  group_by(MORTGAGE = haven::as_factor(MORTGAGE)) %>% 
+  summarize(n = n()) %>% 
+  mutate(pct = n / sum(n))
 
 
+# 5. What proportion of **households across the country** in 2010 had a mortgage?
+data_1 %>% 
+  filter(PERNUM == 1) %>% 
+  group_by(MORTGAGE = haven::as_factor(MORTGAGE)) %>% 
+  summarize(n = sum(HHWT)) %>% 
+  mutate(pct = n / sum(n))
+
+# 6. What proportion of households owned their home? Does the sample over or under-
+# represent households who own their home?
+
+# Only 20.1% of households own their home free & clear, the sample over-represents
+# households that own their home because in the sample the proportion is 24%
+
+# 7. What is the average value of:
+# a. A home that is mortgaged?
+# b. A home that is owned?
+data_1 %>%
+  filter(VALUEH != 0 & VALUEH != 9999999 & PERNUM == 1) %>% 
+  group_by(MORTGAGE = haven::as_factor(MORTGAGE)) %>% 
+  summarize(VALUEH = weighted.mean(VALUEH, HHWT))
+
+# 8. What could explain this difference
+# Perhaps homes that have already been paid off are older and less expensive, or it
+# takes less time to pay off a home that is worth less.
+
+data_summary <- data_1 %>%
+  filter(VALUEH != 0 & VALUEH != 9999999 & PERNUM == 1)
+
+ggplot(data_summary,
+       aes(x = as.numeric(VALUEH), weight = HHWT)) +
+  stat_bin(bins = 30)
+
+# There doesn’t seem to be a significant cluster around the topcodes, so the data
+# sample may not be noticeably biased.
+
+## Part 2: Frequencies
+# 10. What were the three most commonly spoken languages in the US in 2010?
+data_1 %>% 
+  group_by(LANGUAGE = haven::as_factor(LANGUAGE, levels = "both")) %>% 
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n)) %>% 
+  arrange(desc(n))
+
+# 1. English
+# 2. Spanish
+# 3. Chinese
+
+# 11. Using the code page on the website for LANGUAGE, find the codes for the 
+# three most commonly spoken languages.
+
+# 01 English
+# 12 Spanish
+# 43 Chinese
+
+# 12. What percent of individuals who speak English at home:
+# a. Has a mother who speaks Spanish at home?
+# b. Has a mother who speaks Chinese at home?
+
+data_1 %>% 
+  filter(LANGUAGE == 1) %>% 
+  summarize(mom_spanish = weighted.mean(LANGUAGE_MOM == 12, PERWT, na.rm = T),
+            mom_chinese = weighted.mean(LANGUAGE_MOM == 43, PERWT, na.rm = T))
+
+# a. 3.89%
+# b. .223%
+
+# 13. What percent of men under the age of 30 speak Spanish at home?
+data_1 %>%
+  filter(haven::as_factor(SEX) == "Male" & AGE < 30) %>%
+  group_by(LANGUAGE = haven::as_factor(LANGUAGE)) %>%
+  summarize(n = sum(PERWT)) %>% 
+  mutate(pct = n / sum(n)) %>%
+  arrange(desc(pct))
+
+# 13.4%
+
+## Part 3: Advanced Exercises
+# 14. On the website what are the codes for METRO? 
+
+# Code 0: Metropolitan status indeterminable (mixed)
+# Code 1: Not in metropolitan area
+# Code 2: In metropolitan area & in center/principal city
+# Code 3: In metropolitan area & NOT in center/principal city
+# Code 4: Central/principal city status indeterminable (mixed)	
+
+# What is the code for a "single family house, detached" in the variable UNITSSTR?
+# Code 03	1-family house, detached
+
+# 15. What is the proportion of households in the central city who owned their home
+# a. in 2008?
+# b. in 2010?
+
+data_2 %>%
+  filter(PERNUM == 1 & METRO == 2) %>%
+  group_by(YEAR) %>%
+  summarize(own = weighted.mean(OWNERSHP == 1, HHWT))
+
+# a. 44.5%
+# b. 42.9%
+
+# Create a graph for annual utility costs by metropolitan status
+# 16. What is the approximate annual cost of water for:
+
+# a. A household in the metro area in 2010?
+# b. A household not in the metro area in 2010?
+data_2 <- data_2 %>%
+  mutate(in_metro = case_when(METRO == 1 ~ "nonmetro", METRO
+                              %in% 2:4 ~ "metro", METRO == 0 ~ NA_character_))
+data_2 %>%
+  filter(PERNUM == 1 & YEAR == 2010 & COSTWATR != 0 & COSTWATR <
+           9990 & !is.na(in_metro)) %>%
+  group_by(in_metro) %>%
+  summarize(COSTWATR = weighted.mean(COSTWATR, HHWT)) %>% 
+ggplot(aes(x = in_metro, y = COSTWATR)) +
+  geom_col(fill = "royalblue3")
+
+# a. $565 a year
+# b. $491 a year
+
+# 17. What is the approximate annual cost of electricity for:
+# a. A household in the metro area in 2010?
+# b. A household not in the metro area in 2010?
+data_2 %>%
+  filter(PERNUM == 1 & YEAR == 2010 & COSTELEC != 0 & COSTELEC <
+           9990 & !is.na(in_metro)) %>%
+  group_by(in_metro) %>%
+  summarize(COSTELEC = weighted.mean(COSTELEC, HHWT)) %>% 
+  ggplot(aes(x = in_metro, y = COSTELEC)) +
+  geom_col(fill = "yellow")
+
+# a. $1,658 a year
+# b. $1,724 a year
+
+# 18.In this sample, is there a simple correlation between the number of rooms and the
+# annual cost of electricity?
+data_subset <- data_2 %>%
+  filter(PERNUM == 1 & COSTELEC > 0 & COSTELEC < 9990 & ROOMS >
+           0) %>%
+  select(COSTELEC, ROOMS, HHWT)
+
+
+wtd_covariance <- cov.wt(
+  data_subset %>% select(COSTELEC, ROOMS), 
+  wt = data_subset$HHWT, cor = TRUE)
+
+wtd_covariance$cor
+
+# Next, create a graph that will display the average cost of gas and water over time,
+# controlling for the number of rooms and the units in structure. To control for these
+# variables, look at the specific case of a detached, single-family house with 5 rooms.
+
+# 19. On the website, find the variable description for COSTGAS and note that gas costs
+# are expressed in contemporary dollars. To adjust costs for inflation a price index,
+# use CPI99. Go to the CPI99 variable description page. What year is the index year
+# and how do you apply the inflation adjustment?
+
+# 1999 is the index year; real costs adjusted for
+# inflation and indexed to the 1999 U.S. dollars are estimated by generating a new
+# variable CPI99 * COSTGAS
+
+# 20. Did the annual cost of gas for a single family, 5-room home increase between 2005
+# and 2010 in nominal terms? What about the annual cost of water?
+
+gas_water_data_summary <- data_2 %>%
+  filter(PERNUM == 1 & COSTGAS != 0 & COSTGAS < 9990 & COSTWATR !=
+           0 & COSTWATR < 9990) %>%
+  filter(UNITSSTR == 3 & ROOMS == 5) %>%
+  group_by(YEAR = YEAR) %>%
+  summarize(COSTGAS = weighted.mean(COSTGAS, HHWT), COSTWATR =
+              weighted.mean(COSTWATR, HHWT)) %>%
+  gather(key, value, COSTGAS, COSTWATR)
+
+ggplot(gas_water_data_summary, aes(x = YEAR, y = value, fill = key)) +
+  geom_col(position = "dodge") + theme(axis.text.x =
+                                         element_text(angle = 20, hjust = 1)) +
+  scale_fill_manual(values = c("#7570b3", "#e6ab02"))
+
+# Nominal cost of water has gone up, nominal cost of gas has been more variable.
+# In nominal terms, the cost of gas has fluctuated over time, but the cost of water has
+# steadily increased.
+
+# 21. Did the annual cost of gas for a single family, 5 room home increased between
+# 2005 and 2010 in real terms? Note: The variable CPI99 assigns an inflation index value according to
+# the year of the observation.
+
+gas_data_summary <- data_2 %>%
+  filter(PERNUM == 1 & COSTGAS != 0 & COSTGAS < 9990) %>%
+  filter(UNITSSTR == 3 & ROOMS == 5) %>%
+  mutate(COSTGAS = COSTGAS * CPI99) %>%
+  group_by(YEAR) %>%
+  summarize(COSTGAS = weighted.mean(COSTGAS, HHWT))
+
+ggplot(gas_data_summary, aes(x = YEAR, y = COSTGAS)) +
+  geom_col(position = "dodge", fill = "darkblue") +
+  theme(axis.text.x = element_text(angle = 20, hjust = 1))
+
+# In real terms, the gas prices fluctuated over time.
 
