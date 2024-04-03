@@ -27,7 +27,7 @@ While the exact form depends on the problem, it's usually a great approximation 
 
 $\displaystyle\sum_{i}\frac{(O_i - E_i)^2}{E_i}$,
 
-where $O_i$ stands for an observed value and $E_i$ is its expected value should the null hypothesis $H_0$ be true. A statistic of this form is called a **Pearson's $\chi^2$ statistic**.
+where $O_i$ stands for an observed value and $E_i$ is its expected value should the null hypothesis $H_0$ be true. A statistic of this form is called a **Pearson's $\chi^2$ statistic**. A $\chi^2(k)$ random variable is the sum of $k$ _independent, squared normal_ variables
 
 Using an example of a test of four basketballs players shooting free throws independently to see if their miss percentage had significantly deviated from the past, it was the sum of the squares of **four** "standardized" and independent binominal random  variables that could be approximated by the standard normal variables thanks to the _central limit theorem_.
 
