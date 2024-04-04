@@ -17,7 +17,7 @@ For any table with $r$ rows and $c$ columns, the naive number of degrees of free
 
 We have to decrease $rc$ by 1 for every constraint in order to get the true count of the degrees of freedom. If the sum of the counts in every row and every column is known and fixed, they each contribute 1 constraint. Thus the rows and columns contribute $r + c$ constraints, which means the native count of degrees of freedom $r*c$ needs to be decreased by this amount.
 
-_Additionally_, If you have the **total** sum number of sample (e.g. people in a study) you don't need one of the $r + c$ constraints coming from the rows and columns of the table.
+_Additionally_, If you have the **total** sum number of sample (e.g. people in a study) you don't need one of the $r + c$ constraints coming from the rows and columns of the table. So you have to add one back in.
 
 All together, a table with $r$ rows and $c$ columns recording cell counts for a homogeneity test of categorical variables has $(r+c−1)$ constraints. Subtracting this from the naive degree of freedom count gives us:
 
