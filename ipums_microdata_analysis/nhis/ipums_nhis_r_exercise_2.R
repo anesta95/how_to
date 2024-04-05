@@ -201,4 +201,132 @@ data %>%
 
 # 12.9%
 
+## Part 3: Generating Variables
+# Generate a variable that is 0 when an individual exercises less than 3 times a week, and 1
+# when an individual exercises 3 or more times a week. *NOTE: Graphing procedures (in Part
+# 4 of this exercise) across statistical packages do not consistently allow for all weight and
+# variance estimation options. Because this section generates variables used in the graphing
+# section of this exercise, neither Part 3 nor Part 4 of this exercise use weights.
 
+# 8. Check the output of the do file in the Log window to find the codes for 
+# VIG10FWK. Which code means "Never"?
+
+# Note: You'll have to exclude codes above 28 when defining when exer3 is greater
+# than 3 times a week.
+
+# Code 95 - Never
+
+
+# 9. What is the average difference in BMI for an individual in this sample who exercises
+# at least 3 times a week compared to someone who exercises fewer than 3 times per
+# week? 
+
+data <- data %>% 
+  mutate(EXER3 = if_else((VIG10FWK >= 3 & VIG10FWK <= 28), T, F))
+
+data %>% 
+  filter(BMI > 0 & BMI < 99) %>% # Filtering out zero and topcoded BMIs
+  group_by(EXER3) %>% 
+  summarize(BMI = mean(BMI))
+
+# Now with weights
+data %>% 
+  filter(BMI > 0 & BMI < 99) %>% # Filtering out zero and topcoded BMIs
+  group_by(EXER3) %>% 
+  summarize(BMI = weighted.mean(BMI, PERWEIGHT))
+
+# Average difference of about 1.2 BMI (27.7 - 26.5; unweighted)
+
+# 10. What percent of more frequent exercisers report excellent health?
+# 11. What percent of less frequent exercisers report excellent health?
+
+data %>% 
+  filter(HEALTH < 6) %>% # Filtering out "unknown" HEALTH codes
+  group_by(EXER3, HEALTH = haven::as_factor(HEALTH)) %>% 
+  summarize(n = n()) %>% 
+  mutate(pct = n / sum(n))
+
+# Now with weights
+data %>% 
+  filter(HEALTH < 6) %>% # Filtering out "unknown" HEALTH codes
+  group_by(EXER3, HEALTH = haven::as_factor(HEALTH)) %>% 
+  summarize(n = sum(PERWEIGHT)) %>% 
+  mutate(pct = n / sum(n))
+
+# 41.4% of more frequent exercisers reported excellent health
+# 34.2% of less frequent exercisers reported excellent health
+
+## Part 4: Graphing
+# Create a graph to show the mean BMI over age for males and females
+
+# 12. How does the universe for BMI appear on this graph?
+# There appears to be no BMI for individuals below 18, 
+# because the universe for BMI is only for adults older than 18
+
+# 12. Approximately at what age does BMI peak
+
+# for women?
+# 63 years old (unweighted & weighted)
+
+# for men?
+# 52 years old (unweighted & weighted)
+data_summary_unweighted <- data %>% 
+  filter(BMI > 0, BMI < 99) %>% 
+  group_by(SEX = haven::as_factor(SEX), AGE) %>% 
+  summarize(BMI = mean(BMI))
+
+data_summary_weighted <- data %>% 
+  filter(BMI > 0, BMI < 99) %>% 
+  group_by(SEX = haven::as_factor(SEX), AGE) %>% 
+  summarize(BMI = weighted.mean(BMI, PERWEIGHT))
+
+ggplot(data_summary_unweighted, aes(x = AGE, y = BMI, color = SEX)) +
+  geom_line()+
+  scale_color_manual(values = c(Male = "#7570b3", Female =
+                                  "#e6ab02"))
+
+ggplot(data_summary_weighted, aes(x = AGE, y = BMI, color = SEX)) +
+  geom_line()+
+  scale_color_manual(values = c(Male = "#7570b3", Female =
+                                  "#e6ab02"))
+
+# Introduce the variable POORYN
+# 14. Create a graph to show how an associated effect of poverty status on BMI differs
+# with gender, controlling for frequent exercise. Comment on three apparent trends
+
+data_summary_poverty_bmi_exercise_unweighted <- data %>% 
+  filter(BMI > 0 & BMI < 99 & POORYN != 9) %>%
+  group_by(EXER3, SEX = as_factor(SEX), POORYN =
+             as_factor(POORYN)) %>%
+  summarize(BMI = mean(BMI))
+
+data_summary_poverty_bmi_exercise_weighted <- data %>% 
+  filter(BMI > 0 & BMI < 99 & POORYN != 9) %>%
+  group_by(EXER3, SEX = as_factor(SEX), POORYN =
+             as_factor(POORYN)) %>%
+  summarize(BMI = weighted.mean(BMI, PERWEIGHT))
+
+ggplot(data_summary_poverty_bmi_exercise_unweighted, 
+       aes(x = interaction(EXER3, SEX), y = BMI,
+                         fill = POORYN)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("#7570b3", "#e6ab02")) +
+  theme(legend.position = "bottom")
+
+ggplot(data_summary_poverty_bmi_exercise_weighted, 
+       aes(x = interaction(EXER3, SEX), y = BMI,
+           fill = POORYN)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("#7570b3", "#e6ab02")) +
+  theme(legend.position = "bottom")
+
+# It looks like men at or above the poverty threshold have higher BMIs than 
+# those below the povery threshold, but the BMI for men who exercise in general
+# is lower than for those who don't.
+
+# Alternatively, women below the poverty threshold tended to have *higher* average 
+# BMI's compared to those that were at or above the poverty threshold, especially for 
+# women who don't exercise.
+
+# Frequent exercisers have lower BMI's on average in
+# each category.
