@@ -1,0 +1,9 @@
+name,function,url
+census geocoder,geocoding,https://geocoding.geo.census.gov/geocoder/
+tidygeocoder,geocoding,https://geocoding.geo.census.gov/geocoder/
+monolith,scraping,https://crates.io/crates/monolith
+shot-scraper,scraping,https://github.com/simonw/shot-scraper
+csvmatch,fuzzy matching,https://github.com/maxharlow/csvmatch
+tabula,scraping,https://tabula.technology/
+tabulapdf,scraping,https://github.com/ropensci/tabulapdf
+yt-dlp,scraping,https://github.com/yt-dlp/yt-dlp
