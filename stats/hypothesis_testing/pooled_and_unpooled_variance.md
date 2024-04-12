@@ -63,3 +63,30 @@ When the sample sizes are _different_, an appropriate statistic is given by:
 $t_{n_1 + n_2 - 2} = \frac{\bar{X}_2 - \bar{X}_1}{\sqrt{\frac{s^2_p}{n_1} + \frac{s^2_p}{n_2}}}$
 
 **Pooled variance** is useful in characterizing the _change in a population over time_.
+
+### Unpooled Variance
+* Instead of testing a hypothesis about change within a **single** population, estimate the difference between the means of two **distinct** populations.
+* Instead of pooled variance, define and use **unpooled variance** to compute our statistic since the true population variances won't necessarily be the same.
+
+The ratio of sample standard deviations $s_1$ and $s_2$ is often used to decide if the variances of two populations are the same. Specifically if 
+
+$\frac{1}{2} \lt \frac{s_1}{s_2} \lt 2$
+
+then it's reasonably safe to assume the true variances of populations 1 and 2 are equal. If the ratio of the sample standard deviations is _not_ between 0.5 and 2, the data doesn't suggest that the two _population_ variances are equal and thus using a pooled variance isn't useful/applicable.
+
+The **unpooled variance** is defined to be:
+
+$s^2_{up} = \frac{s^2_1}{n_1} + \frac{s^2_2}{n_2}$
+
+When comparing the means of two populations with (probably) unequal variances,
+
+$\frac{(Y_1 - Y_2) - (\mu_1 - \mu_2)}{s_{up}}$
+
+is often a very useful $t$-statistic where $s_{up}$ is the unpooled standard deviation. Here, the **unpooled variance** is defined by:
+
+$s^2_{up} = \frac{s^2_1}{n_1} + \frac{s^2_2}{n_2}$.
+
+The statistic is approximately distributed like a Student $t$-variable with: $min\{n_1 - 1, n_2 - 1\}$ degrees of freedom.
+
+
+

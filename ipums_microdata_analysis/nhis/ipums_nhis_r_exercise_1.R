@@ -38,7 +38,7 @@
   # HINOTCOVE: Health insurance status
   # EDUCREC2: Educational attainment
 
-# Review and submit your extract
+## Review and submit your extract
 #  Click the green VIEW CART button under your data cart.
 #  Review variable selection. Note that additional variables are in your data cart. The
 # data extract system automatically supplies variables that indicate the sample
