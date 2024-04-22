@@ -1,6 +1,6 @@
 # IPUMS Data Training Exercise: 
 # ACS/Decennial Extraction and Analysis 
-# (Exercise 1 for R) https://assets.ipums.org/_files/exercises/ipums-usa-exercise-r-1.pdf
+# (Exercise 1 for R) https://assets.ipums.org/_files/exercises/ipums-nhgis-exercise-r-1.pdf
 
 # IPUMS Tutorials: https://www.ipums.org/support/tutorials
 # IPUMS Data Training Exercises: https://www.ipums.org/support/exercises
@@ -236,7 +236,7 @@ nhgis_ext_1 <- define_extract_nhgis(
   shapefiles = ex_1_r_sf_name
 )
 
-nhgis_ext_1_submitted <- submit_extract(nhgis_ext_1)
+nhgis_ext_1_submitted <- submit_extract(nhgis_ext_1, api_key = IPUMS_API_KEY)
 
 nhgis_ext_1_complete <- wait_for_extract(nhgis_ext_1_submitted, api_key = IPUMS_API_KEY)
 
@@ -274,7 +274,12 @@ nhgis <- read_nhgis(nhgis_csv_file)
 # install.packages("ipumsr")
 
 # Read the Data
-#  Set your working directory to where you saved the data above by adapting the #
+#  Set your working directory to where you saved the data above by adapting the
+# following command (Rstudio users can also use the "Project" feature to set the
+# working directory. In the menubar, select File -> New Project -> Existing Directory
+# and then navigate to the folder):
+
+# setwd("~/") 
 
 # Change these filepaths to the filepaths of your downloaded extract
 # nhgis_csv_file <- "nhgis0001_csv.zip"
@@ -287,13 +292,132 @@ nhgis <- read_nhgis(nhgis_csv_file)
 # the following command (but if you know other ways better, feel free to use them):
 # library(ipumsr)
 
+## Analyze the Data
+# Part 1: Analyze the data
+
+# 8. How many states/territories are included in the this table?
+length(table(nhgis$STATE))
+
+# 28 states
+
+# 9. Why do you think other states are missing?
+
+# I don't think other existed in 1830, there are multiple territories
+# even: Michigan, Florida, Arkansas
+
+# 10. Create a new variable called total_pop, with the total population for each state, 
+# by summing the counts in columns ABO001 to ABO006.
+
+# Which state had the largest population?
+
+nhgis <- nhgis %>% 
+  rowwise() %>% 
+  mutate(total_pop = sum(c_across(starts_with("ABO")))) %>% 
+  ungroup()
 
 
+nhgis %>% 
+  slice_max(order_by = total_pop, n = 1)
 
+# New York State with 1,913,006 people
 
+# 11. Create a variable called slave_pop, with the total slave population by summing the
+# variables ABO003 and ABO004. Which state had the largest slave population?
 
+nhgis <- nhgis %>% 
+  mutate(enslaved_person_pop = ABO003 + ABO004)
 
+nhgis %>% 
+  slice_max(order_by = enslaved_person_pop, n = 1)
 
+# Virginia with 469,757 people
+
+# 12. Create a variable called pct_enslaved_persons with the Enslaved Persons Population
+# divided by the Total Population. Which states had the highest and lowest pct_enslaved_persons?
+
+nhgis <- nhgis %>% 
+  mutate(pct_enslaved_persons = enslaved_person_pop / total_pop)
+
+nhgis %>% 
+  filter(pct_enslaved_persons %in% c(min(pct_enslaved_persons, na.rm = T),
+                                     max(pct_enslaved_persons, na.rm = T)))
+
+# South Carolina had the largest percentage at 54.3% and
+# Vermont had the lowest at literally none.
+
+# 13. Are there any surprises, or is it as you expected?
+nhgis %>% 
+  filter(pct_enslaved_persons > 0.5) %>% 
+  select(STATE, enslaved_person_pop, total_pop, pct_enslaved_persons)
+
+nhgis %>% 
+  filter(STATE %in% c("New York", "New Jersey")) %>% 
+  select(STATE, enslaved_person_pop, total_pop, pct_enslaved_persons)
+
+# Some states had more slaves than free persons.
+# Some ‘free states’ were home to substantial numbers of slaves.
+
+## Part 2: Inspect the Codebook
+# Open the .txt codebook file that is in the same folder as the comma delimited file you have
+# already analyzed. The codebook file is a valuable reference containing information about
+# the table or tables you’ve downloaded.
+
+# Some of the information provided in the codebook can be read into R, using the function
+# read_nhgis_codebook()
+
+nhgis_ddi <- read_nhgis_codebook(nhgis_csv_file) 
+
+# 14. What is the proper citation to provide when using NHGIS data in publications or
+# researcher reports?
+
+cat(ipums_file_info(nhgis_ddi, "conditions"))
+
+# 15. What is the email address for NHGIS to share any research you have published?
+#  (You can also send questions you may have about the site. We’re happy to help!)
+
+# nhgis@umn.edu
+
+## Part 3: Make maps using R
+# One of the reasons we are excited about bringing IPUMS data to R is the GIS capabilities
+# available for free in R. To use them, you'll need to install the sf package with the following
+# command:
+ 
+# install.packages("sf")
+
+# If that doesn't work, or you prefer the older style "sp" package for geographic analysis,
+# ipumsr does provide support. For more information, see the "ipums-geography" vignette in
+# R.
+# To load the NHGIS data with the spatial features attached, we use this command (again,
+# you may need to adjust the filepaths):
+
+# Change these filepaths to the filepaths of your downloaded extract
+# nhgis_csv_file <- "nhgis0001_csv.zip"
+# nhgis_shp_file <- "nhgis0001_shape.zip"
+
+# 16. Make a map of the percent of the population that are enslaved people.
+
+library(sf)
+
+nhgis_geo <- read_ipums_sf(
+  shape_file = nhgis_shp_file
+)
+
+# To combine spatial data with tabular data without losing the attributes
+# included in the tabular data, use an ipums shape join:
+nhgis_1830_full_join <- ipums_shape_full_join(nhgis, nhgis_geo, by = "GISJOIN")
+
+library(ggplot2)
+
+ggplot(data = nhgis_1830_full_join, aes(fill = pct_enslaved_persons)) +
+  geom_sf() +
+  scale_fill_continuous("", labels = scales::percent) +
+  labs(
+    title = "Percent of Population that was Enslaved by
+State",
+    subtitle = "1830 Census",
+    caption = paste0("Source: ", ipums_file_info(nhgis_ddi,
+                                                 "ipums_project"))
+  )
 
 
 
