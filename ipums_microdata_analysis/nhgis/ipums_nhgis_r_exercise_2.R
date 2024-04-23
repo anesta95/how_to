@@ -161,7 +161,7 @@ edu_attain_ts_tbl_dtl$geographic_integration
 tst <- tst_spec(
   name = edu_attain_ts_tbl,
   geog_levels = "place",
-  years = "1990"
+  years = c("1990", "2008-2012")
 )
 
 nhgis_ext_2 <- define_extract_nhgis(
@@ -181,8 +181,11 @@ download_extract(nhgis_ext_2_complete,
                  download_dir = "../../microdata/",
                  api_key = IPUMS_API_KEY)
 
-ddi <- read_ipums_ddi(paste0("nhgis_0000", nhgis_ext_2_complete_num, ".xml"))
-nhgis <- read_ipums_micro(ddi)
+nhgis_csv_file <- paste0("../../microdata/nhgis000", nhgis_ext_2_complete_num, "_csv.zip")
+
+nhgis_ddi <- read_nhgis_codebook(nhgis_csv_file) # Contains metadata, nice to have as a separate object
+
+nhgis <- read_nhgis(nhgis_csv_file)
 
 ## Getting the data into your statistics software
 # The following instructions are for R.
@@ -230,3 +233,131 @@ nhgis <- read_ipums_micro(ddi)
 # value-labels vignette in the R package. From R run command:
 
 # vignette("value-labels", package = "ipumsr")
+
+## Part 1: Analyze the data
+# 8. How many places are included in this table?
+
+length(unique(nhgis$NHGISCODE))
+
+# 30,362
+
+# 9. Why do you think some places have missing values for some years?
+nhgis %>% 
+  group_by(NHGISCODE) %>% 
+  summarize(NAME1990 = NAME1990[1], num_years = n())
+
+# Possibilities:
+# They didn’t exist yet or ceased to exist at some point. They were unincorporated
+# places that the Census did not identify in some years. The city changed its name
+# or merged with another.
+
+# 10. How many place records are there for Minnesota?
+# (Future questions will refer to the Minnesota subset)
+
+mn <- nhgis %>% 
+  filter(STATE == "Minnesota")
+
+length(unique(mn$NHGISCODE))
+
+# 916
+
+# 11. Aiming to compare counts of college graduates from 1990 and 2008-2012, it will be
+# helpful first to think about only the columns of interest. Defining “college graduates”
+# as anyone with a bachelor’s degree or higher, which columns should we use?
+# Note: The 2008-2012 data include both estimates and margins of error columns. For now,
+# we’re only interested in the estimate.
+
+nhgis_ddi %>%
+  ipums_var_info() %>%
+  select(var_name, var_label) %>%
+  filter(grepl("^B85", var_name) & !grepl("^Margin of error",
+                                          var_label))
+
+# Create a new variables called “CollegeGrad,” and sum the appropriate counts to
+# create totals for all places.
+
+# 12. How many college graduates were living in White Bear Lake in 1990?
+
+mn <- mn %>% 
+  mutate(CollegeGrad1990 = B85AF1990 + B85AG1990,
+         CollegeGrad2008_2012 = B85AF125 + B85AG125)
+
+mn %>%
+  select(NHGISCODE, PLACE, CollegeGrad1990) %>%
+  filter(grepl("^White Bear Lake", PLACE))
+
+# 4,445
+
+# Summarize the table to calculate “ChangeCollegeGrad”, and compute the total
+# change in college grads between 1990 and 2008-2012 for all places.
+
+# 13. Which city had the highest increase? How much was it?
+
+mn_change <- mn %>% 
+  filter(!is.na(NAME1990), !is.na(NAME2012)) %>% 
+  group_by(NHGISCODE) %>% 
+  summarize(PLACE = PLACE[1], ChangeCollegeGrad = CollegeGrad2008_2012 - CollegeGrad1990)
+
+mn_change %>% 
+  slice_max(order_by = ChangeCollegeGrad, n = 5)
+
+# 1 G27043000 Minneapolis city             40568
+# 2 G27058000 St. Paul city                20224
+# 3 G27071428 Woodbury city                17214
+# 4 G27054880 Rochester city               15535
+# 5 G27051730 Plymouth city                14519
+
+# We would expect that cities with great increases also had high overall population
+# growth and vice versa. Continue working through the next set of questions if you
+# would like to find out which cities had the greatest increases in the proportion of the
+# population with bachelor’s degrees.
+
+## Part 2: College Grads by Place (Optional)
+# Create a new variable called Total, and sum the appropriate counts to get the total of all
+# persons 25 years and over.
+
+# 14. What was the total population 25+ of St. Paul in 2008-2012
+mn <- mn %>% 
+  rowwise() %>% 
+  mutate(TotalPop = sum(c_across(ends_with("125")))) %>% 
+  ungroup()
+
+
+mn %>% 
+  select(NHGISCODE, PLACE, TotalPop) %>% 
+  filter(grepl("St. Paul", PLACE))
+
+# 174,459
+
+# Create a new variables called PctCollege. Multiply 100 times each CollegeGrad variable
+# divided by each Total variable to calculate the percentage of the 25+ population with college
+# degrees
+
+# 15. Which city had the highest percentage of college grads in 2008-2012?
+# Create a summary table with ChangePctCollege and calculate the differences between the
+# PctCollege variables between 1990 and 2008-2012.
+
+mn <- mn %>% 
+  mutate(PctCollegeGrad2008_2012 = CollegeGrad2008_2012 / TotalPop)
+
+mn %>% 
+  select(NHGISCODE, PLACE, PctCollegeGrad2008_2012, TotalPop, CollegeGrad2008_2012) %>% 
+  slice_max(order_by = PctCollegeGrad2008_2012, n = 5)
+
+# Woodland city with 79.8%
+
+# 16. Which city had the highest increase in its proportion of college graduates?
+
+mn_prop_change <- mn %>% 
+  rename(TotalPop2009_2012 = TotalPop) %>% 
+  rowwise() %>% 
+  mutate(TotalPop1990 = sum(c_across(matches("^B85\\w{2}1990")))) %>% 
+  ungroup() %>% 
+  mutate(PctCollegeGrad1990 = CollegeGrad1990 / TotalPop1990) %>% 
+  group_by(NHGISCODE) %>% 
+  summarize(PLACE = PLACE[1], ChangeCollegeGrad = PctCollegeGrad2008_2012 - PctCollegeGrad1990)
+
+mn_prop_change %>% 
+  slice_max(order_by = ChangeCollegeGrad, n = 5)
+
+# Carver city had a +43.7 percentage point increase.
