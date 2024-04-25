@@ -1,0 +1,18 @@
+# [3.1 The tidyverse](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#the-tidyverse)
+
+[The tidyverse](https://www.tidyverse.org/) is a collection of R packages that are designed to work together in common data wrangling, analysis, and visualization projects. Some of the key packages you'll use in the tidyverse include:
+
+* __readr__, which contains tools for importing and exporting datasets.
+* __dplyr__, a powerful framework for data wrangling tasks.
+* __tidyr__, a package for reshaping data.
+* __purrr__, a comprehensive framework for functional programming and iteration.
+* __ggplot2__, a data visualization package based on the [Grammar of Graphics](https://vita.had.co.nz/papers/layered-grammar.pdf).
+
+The core data structure used in the tidyverse is the tibble, which is an R data frame with some small enhancements to improve the user experience. __tidycensus__ returns tibbles by default.
+
+
+
+
+
+
+

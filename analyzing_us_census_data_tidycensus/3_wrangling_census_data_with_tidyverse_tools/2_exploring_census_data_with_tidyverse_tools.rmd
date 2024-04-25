@@ -1,0 +1,162 @@
+# [3.2 Exploring Census data with tidyverse tools](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#exploring-census-data-with-tidyverse-tools)
+
+To get started, the tidycensus and tidyverse packages are loaded. “tidyverse” is not specifically a package itself, but rather loads several core packages within the tidyverse. The package load message gives you more information
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+```
+
+## [3.2.1 Sorting and filtering data](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#sorting-and-filtering-data)
+
+Let’s request data on median age from the 2016-2020 ACS with `get_acs()` for all counties in the United States. This requires specifying `geography = "county"` and leaving state set to `NULL`, the default.
+
+```{r}
+median_age <- get_acs(
+    geography = "county",
+    variables = "B01002_001",
+    year = 2020
+)
+```
+A first exploratory data analysis question might involve understanding which counties are the _youngest_ and _oldest_ in the United States as measured by median age. This task can be accomplished with the `arrange()` function found in the **dplyr** package. `arrange()` sorts a dataset by values in one or more columns and returns the sorted result. To view the dataset in ascending order of a given column, supply the data object and a column name to the `arrange()` function.
+
+```{r}
+arrange(median_age, estimate)
+```
+
+To retrieve the oldest counties in the United States by median age, an analyst can use the `desc()` function available in **dplyr** to sort the estimate column in descending order.
+
+```{r}
+arrange(median_age, desc(estimate))
+```
+
+The `filter()` function in **dplyr** queries a dataset for rows where a given condition evaluates to `TRUE`, and retains those rows only. For analysts who are familiar with databases and SQL, this is equivalent to a `WHERE` clause. This helps analysts subset their data for specific areas by their characteristics, and answer questions like “how many counties in the US have a median age of 50 or older?”
+
+
+```{r}
+filter(median_age, estimate >= 50)
+```
+
+Functions like `arrange()` and `filter()` operate on row values and organize data by row. Other tidyverse functions, like **tidyr**’s `separate()`, operate on columns. The `NAME` column, returned by default by most **tidycensus** functions, contains a basic description of the location that can be more intuitive than the `GEOID`. For the 2016-2020 ACS, `NAME` is formatted as “X County, Y”, where X is the county name and Y is the state name. `separate()` can split this column into two columns where one retains the county name and the other retains the state; this can be useful for analysts who need to complete a comparative analysis by state.
+
+```{r}
+separate(
+    median_age,
+    NAME,
+    into = c("county", "state"),
+    sep = ", "
+)
+```
+
+## [3.2.2 Using summary variables and calculating new columns](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#using-summary-variables-and-calculating-new-columns)
+
+Data in Census and ACS tables, as in the example above, are frequently comprised of variables that individually constitute sub-categories such as the numbers of households in different household income bands. One limitation of the approach above, however, is that the data and the resulting analysis return estimated counts, which are difficult to compare across geographies. For example, Maricopa County in Arizona is the state’s most populous county with 4.3 million residents; the second-largest county, Pima, only has just over 1 million residents and six of the state’s 15 counties have fewer than 100,000 residents. In turn, comparing Maricopa’s estimates with those of smaller counties in the state would often be inappropriate.
+
+A solution to this issue might involve **normalizing** the estimated count data by dividing it by the overall population from which the sub-group is derived. Appropriate denominators for ACS tables are frequently found in the tables themselves as variables. In ACS table B19001, which covers the number of households by income bands, the variable `B19001_001` represents the total number of households in a given enumeration unit, which we removed from our analysis earlier. Given that this variable is an appropriate denominator for the other variables in the table, it merits its own column to facilitate the calculation of proportions or percentages.
+
+In **tidycensus**, this can be accomplished by supplying a variable ID to the `summary_var` parameter in both the `get_acs()` and `get_decennial()` functions. When using `get_decennial()`, doing so will create two new columns for the decennial Census datasets, `summary_var` and `summary_value`, representing the summary variable ID and the summary variable’s value. When using `get_acs()`, using `summary_var` creates three new columns for the ACS datasets, `summary_var`, `summary_est`, and `summary_moe`, which include the ACS estimate and margin of error for the summary variable.
+
+The following example uses the `summary_var` parameter to compare the population of counties in Arizona by race & Hispanic origin with their baseline populations, using data from the 2016-2020 ACS.
+
+```{r}
+race_vars <- c(
+  White = "B03002_003",
+  Black = "B03002_004",
+  Native = "B03002_005",
+  Asian = "B03002_006",
+  HIPI = "B03002_007",
+  Hispanic = "B03002_012"
+)
+
+az_race <- get_acs(
+  geography = "county",
+  state = "AZ",
+  variables = race_vars,
+  summary_var = "B03002_001",
+  year = 2020
+) 
+```
+
+By using dplyr’s `mutate()` function, we calculate a new column, `percent`, representing the percentage of each Census tract’s population that corresponds to each racial/ethnic group in 2016-2020. The `select()` function, also in dplyr, retains only those columns that we need to view.
+
+```{r}
+az_race_percent <- az_race %>%
+    mutate(percent = 100 * (estimate / summary_est)) %>%
+    select(NAME, variable, percent)
+```
+
+# [3.3 Group-wise Census data analysis](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#group-wise-census-data-analysis)
+The split-apply-combine model of data analysis, as discussed in Wickham ([2011](https://walker-data.com/census-r/references.html#ref-wickham2011)), is a powerful framework for analyzing demographic data. In general terms, an analyst will apply this framework as follows:
+
+* The analyst identifies salient groups in a dataset between which they want to make comparisons. The dataset is then **split** into multiple pieces, one for each group.
+
+* A function is then **applied** to each group in turn. This might be a simple summary function, such as taking the maximum or calculating the mean, or a custom function defined by the analyst.
+
+* Finally, the results of the function applied to each group are **combined** back into a single dataset, allowing the analyst to compare the results by group.
+
+In the tidyverse, split-apply-combine is implemented with the `group_by()` function in the dplyr package. `group_by()` does the work for the analyst of splitting a dataset into groups, allowing subsequent functions used by the analyst in an analytic pipeline to be applied to each group then combined back into a single dataset. The examples that follow illustrate some common group-wise analyses.
+
+## [3.3.1 Making group-wise comparisons](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#making-group-wise-comparisons)
+
+The `az_race_percent` dataset created above is an example of a dataset suitable for group-wise data analysis. It includes two columns that could be used as group definitions: `NAME`, representing the county, and `variable`, representing the racial or ethnic group. Split-apply-combine could be used for either group definition to make comparisons for data in Arizona across these categories.
+
+We can deploy group-wise data analysis to identify the largest racial or ethnic group in each county in Arizona. This involves setting up a data analysis pipeline with the **magrittr** pipe and calculating a _grouped filter_ where the `filter()` operation will be applied specific to each group. In this example, the filter condition will be specified as `percent == max(percent)`. We can read the analytic pipeline then as “Create a new dataset, `largest_group`, by using the `az_race_dataset` THEN grouping the dataset by the `NAME` column THEN filtering for rows that are equal to the maximum value of `percent` for each group.”
+
+```{r}
+largest_group <- az_race_percent %>% 
+  group_by(NAME) %>% 
+  filter(percent == max(percent))
+```
+
+`group_by()` is commonly paired with the `summarize()` function in data analysis pipelines. `summarize()` generates a new, condensed dataset that by default returns a column for the grouping variable(s) and columns representing the results of one or more functions applied to those groups. In the example below, the `median()` function is used to identify the median percentage for each of the racial & ethnic groups in the dataset across counties in Arizona. In turn, `variable` is passed to `group_by()` as the grouping variable.
+
+```{r}
+az_race_percent %>% 
+  group_by(variable) %>% 
+  summarize(median_pct = median(percent))
+```
+
+## [3.3.2 Tabulating new groups](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#tabulating-new-groups)
+
+Commonly, analysts will also need to calculate new custom groups to address specific analytic questions. For example, variables in ACS table B19001 represent groups of households whose household incomes fall into a variety of categories: less than \$10,000/year, between \$10,000/year and \$19,999/year, and so forth. These categories may be more granular than needed by an analyst. As such, an analyst might take the following steps: 1) recode the ACS variables into wider income bands; 2) group the data by the wider income bands; 3) calculate grouped sums to generate new estimates.
+
+Consider the following example:
+
+```{r}
+mn_hh_income <- get_acs(
+  geography = "county",
+  table = "B19001",
+  state = "MN",
+  year = 2016
+)
+```
+
+Our data include household income categories for each county in the rows. However, let’s say we only need three income categories for purposes of analysis: below \$35,000/year, between \$35,000/year and \$75,000/year, and \$75,000/year and up.
+
+
+We first need to do some transformation of our data to recode the variables appropriately. First, we will remove variable `B19001_001`, which represents the total number of households for each county. Second, we use the `case_when()` function from the **dplyr** package to identify groups of variables that correspond to our desired groupings. Given that the variables are ordered in the ACS table in relationship to the household income values, the less than operator can be used to identify groups.
+
+The syntax of `case_when()` can appear complex to beginners, so it is worth stepping through how the function works. Inside the `mutate()` function, which is used to create a new variable named `incgroup`, `case_when()` steps through a series of logical conditions that are evaluated in order similar to a series of if/else statements. The first condition is evaluated, telling the function to assign the value of `below35k` to all rows with a `variable` value that comes before `"B19001_008"` - which in this case will be `B19001_002` (income less than \$10,000) through `B19001_007` (income between \$30,000 and \$34,999). The second condition is then evaluated _for all those rows not accounted for by the first condition_. This means that `case_when()` knows not to assign `"bw35kand75k"` to the income group of $10,000 and below even though its variable comes before `B19001_013`. The final condition in `case_when()` can be set to `TRUE` which in this scenario translates as "all other values."
+
+```{r}
+mn_hh_income_recode <- mn_hh_income %>% 
+  filter(variable != "B19001_001") %>% 
+  mutate(incgroup = case_when(
+    variable < "B19001_008" ~ "below35k",
+    variable < "B19001_013" ~ "bw35kand75k",
+    T ~ "above75k"
+  ))
+```
+
+Our result illustrates how the different variable IDs are mapped to the new, recoded categories that we specified in `case_when()`. The `group_by() %>% summarize()` workflow can now be applied to the recoded categories by county to tabulate the data into a smaller number of groups.
+
+```{r}
+mn_group_sums <- mn_hh_income_recode %>% 
+  group_by(GEOID, incgroup) %>% 
+  summarize(estimate = sum(estimate))
+```
+
+Our data now reflect the new estimates by group by county.
+
+# [3.4 Comparing ACS estimates over time](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#comparing-acs-estimates-over-time)
+
