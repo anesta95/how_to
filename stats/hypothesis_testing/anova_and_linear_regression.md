@@ -27,7 +27,12 @@ The best possible constant model makes the SSE – sum of squared errors – as
 
 For observations $y_1,\dots,y_n$, the SSE of the model $Y = \bar{y}$ is $\displaystyle\sum^n_{i=1}(y_i - \bar{y})^2$, which is the smallest value for the SSE among all constant models.
 
+### Best-fit lines
 
+We say that the **best-fit line** is the one that leads to the smallest SSE. There's a surefire process for finding the best-fit line.
 
+The linear model of a data set with minimal SSE corresponds graphically to the straight line that passes closest to all points in the scatter plot.
 
+If the points are ${(x_1,y_1),\dots(x_n,y_n)}$ then the intercept is given by $c = \bar{y} - m\bar{x}$ while the slope $m$ is given by $m = \frac{s^2_{XY}}{s^2_{X}}$ where $s^2_X$ and $s^2_Y$ are the sample variances of the predictor and response variables, respectively.
 
+Put together, we have the **best-fit line** $y = c + mx$
