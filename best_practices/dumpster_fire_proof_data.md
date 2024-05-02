@@ -8,15 +8,14 @@ limits of their knowledge and be able to verify what they said.
 
 The goals of the next few pages are:
 * __Instill a healthy paranoia__ in you from the moment you start reporting. You should never stop checking,
-making sure the numbers you’re spending so much time with are really telling you what you think
-they’re telling you.
+making sure the numbers you’re spending so much time with are really telling you what you think they’re telling you.
 * __To make you catch small things__ so they don't become big things. You can catch mistakes, but you
 shouldn’t publish mistakes. This whole thing is about having a system.
 * __Bake bulletproofing into your work__ so this happens on the front end. This is important because:
     1. You don’t want to spend three months working on data for the whole project to fall apart when you realize you made an incorrect assumption.
     2. You absolutely don’t want to do this a week before publication. That last push should be a well-deserved exhale, when you know you’re close and only tying together a few loose ends. The days before publication should absolutely not be a scramble to fact-check everything your story is built upon.
 
-_A final note_
+### _A final note_
 Don’t ever say, “oh that’d be easy” – you’ll screw yourself over later. Nothing is ever easy. You have to be
 honest about the time and investment, so you can deliver things on time. And if your editor asks what is taking
 you so long, tell them “I’m making sure we don’t make a mistake.”
