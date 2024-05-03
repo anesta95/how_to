@@ -88,3 +88,13 @@ As we've shown, the $F$-statistic is the ratio of two $\chi^2$ variables, and we
 If we call the total number of degrees of freedom in either variable a and b, then we can define a new random variable called the $F$ **random variable**.
 
 Let $\chi^2_a$ and $\chi^2_b$ be independent $\chi^2$ random variables. Then $F(a,b) = \frac{\frac{\chi^2_a}{a}}{\frac{\chi^2_b}{b}}$ is called an $F$ **random variable with $a$ and $b$ degrees of freedom.**
+
+### ANOVA Tables
+
+The information presented in an ANOVA table gives a way to judge _how well_ a best-fit line models data. The larger the $F$-value, the better the linear best-fit model describes the data in comparison to the baseline constant model, with is just the sample mean. 
+
+If the $p$-value given by $p = P(F \geq the\:observed\:F-value)$ is below the the significance level (typically 0.05), then we have enough evidence to reject the null hypothesis $H_0$ that there's no linear relationship between a predictor variable and a response variable.
+
+The $F$-value, on the other hand, measures how well the best-fit line performs compared to the best constant model, aka the sample mean.
+
+### Mean Comparisons
