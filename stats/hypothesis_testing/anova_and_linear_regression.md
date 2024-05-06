@@ -17,7 +17,7 @@ The probability of a **false positive** also known as a **Type 1 error** skyrock
 ### Linear Regression
 In the context of linear regression, the dependent variable is still called a response. However the independent variable is called a _predictor_ variable since linear regression is just a data model to make a prediction of future events based on past data.
 
-The model $B$ = constant can't perfectly account for all observations $b_i$. Our measure for its overall performance is the **SSE**:
+The model $B$ = constant can't perfectly account for all observations $b_i$. Our measure for its overall performance is the **SSE** or **Sum of Squared Errors**:
 
 $\displaystyle\sum_{observations}(\text{observation - model prediction})^2 = \displaystyle\sum^n_{i=1}(b_i - constant)^2$
 
@@ -98,3 +98,19 @@ If the $p$-value given by $p = P(F \geq the\:observed\:F-value)$ is below the th
 The $F$-value, on the other hand, measures how well the best-fit line performs compared to the best constant model, aka the sample mean.
 
 ### Mean Comparisons
+
+> "How do we compare multiple population means without inflating the false positive rate?"
+
+The answer lies in reframing the comparison problem as a problem in linear regression. This is referred to as **one-way ANOVA**.
+
+The model prediction is the level mean $\mu_j$ for any factor in level $j$, i.e.
+
+$\text{(model prediction)} = \mu_0 + \displaystyle\sum^{l - 1}_{j=1}(\mu_j - \mu_0)x_j$
+
+In general mean comparison problems, the null hypothesis $H_0$ states that there are no differences in the population means: $\mu_0 = \mu_1 = \mu_2 = \dots$.
+
+Consider the model prediction that's outlined above as a _response variable_ and the indicators as _predictor variables_:
+
+So testing $H_0$ is the same as testing the null hypothesis of linear regression. The null hypothesis $\mu_0 = \mu_1 = \mu_2 = \dots$ is equivalent to stating that the model prediction doesn't depend on any of the predictor variables.
+
+The **latter** version of $H_0$ is precisely what an ANOVA table allows us to decide. 

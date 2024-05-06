@@ -15,7 +15,7 @@ There are two main tasks for which SDA is useful:
 
 These tasks are discussed, in turn, below. Researchers who wish to use NHIS data for
 more advanced analyses (e.g., regressions) should download a data extract from the NHIS website and
-conduct their analysis with a statistical package such as SAS, SPSS, or Stata, rather than with SDA. 
+conduct their analysis with a statistical package such as R, SAS, SPSS, or Stata, rather than with SDA. 
 
 ## Frequencies/Cross-tabulation Program
 
@@ -240,15 +240,139 @@ sense of the relationship between variables, users should be cautious about draw
 inferences from such results. Due to the complex sample design of the National Health Interview
 Survey, restricting analysis to a subpopulation as described above may yield incorrectly computed
 standard errors. See the IHIS user note on Variance Estimation for further discussion of this problem and
-for examples of correct practice in subpopulation analysis using a statistical package like SAS, Stata, or
+for examples of correct practice in subpopulation analysis using a statistical package like R, SAS, Stata, or
 SAS-callable SUDAAN. 
 
 ## Analyzing Multiple Years of Data
 
+You will notice on the SDA-NHIS interface that you have the choice of either using data from a single year or using data from multiple years for 1997 forward. The time period of 1997 forward was chosen
+because a redesign of the NHIS in 1997 resulted in more variable consistency for 1997 forward than for
+earlier years. If you want to analyze data from multiple years prior to 1997, you will need to analyze
+each year separately. 
 
+You will need to use either the [1997-2019 multi-year SDA dataset](https://sda.nhis.ipums.org/sdaweb/analysis/?dataset=nhis_1997_2018) or the [2019 to present multi-year SDA dataset](http://sda.nhis.ipums.org/sdaweb/analysis/?dataset=nhis_2019_present) to do multi-year analysis. In 2019, the NHIS questionnaire [was redesigned](https://nhis.ipums.org/nhis/userNotes_2019_NHIS_Redesign.shtml) to increase relevance, enhance data quality, and minimize respondent burden.
 
+You may use the 1997 forward data file to analyze pooled data from multiple years. Alternatively, you
+may use the "Control" function to produce separate output for multiple years at once. The procedure
+for doing this is similar to the example above where we used "sex" as a control variable to produce
+separate tables for males and females. To produce separate output for each year when using the 1997
+forward data file, enter the variable "year" as the control variable.
 
+![sda_1997_2018_age_health_query](../.imgs/sda_1997_2018_age_health_query.png)
 
+The above input produces the requested table for each year that both variables are available from 1997
+forward, as well as a final table using pooled data from all available years for 1997 forward.
 
+This is the table for 1997: 
 
+![sda_1997_2018_age_health_results_1997](../.imgs/sda_1997_2018_age_health_results_1997.png)
 
+And this is the table for all years 1997-2018:
+
+![sda_1997_2018_age_health_results_full](../.imgs/sda_1997_2018_age_health_results_full.png)
+
+Note: Use `year(1997-2009)` to only select a specfic range of years in the `Control:` function.
+
+## A Word of Caution Regarding the Use of Household Variables
+
+Researchers wishing to do an analysis using household variables should exercise caution. If the desired
+unit of analysis is the household, such an analysis should not be done using SDA. The data that SDA
+employs in its analyses are rectangularized, meaning that household records have been attached to
+each person record. The result of this data structure is that the frequencies reported by SDA for
+household variables, such as "region," actually reflect the number of **persons**, rather than the number of
+**households**.
+
+If, however, the desired unit of analysis is persons (even when analyzing "household" variables), it is
+appropriate to use SDA. If you want to know the number of people living in each Census region of the
+United States, you can apply the **person** weight variable in the Frequencies/Crosstabulation Program to
+obtain frequencies for "region." 
+
+![2009_persons_census_region_query](../.imgs/2009_persons_census_region_query.png)
+![2009_persons_census_region_results](../.imgs/2009_persons_census_region_results.png)
+
+Researchers who want to obtain the number of households in each region (or use any household
+variable with households as the unit of analysis) should use the NHIS website to download a **hierarchical**
+data extract (rather than a rectangular one). To produce figures on the number of households with a
+given characteristic, they should then analyze household records (those with a value of "H" in the
+variable RECTYPE) with a statistical package such as R, SAS, SPSS, or Stata, rather than SDA. 
+
+![NHIS_Hierarchical_Data_Structure_Selection_1](../.imgs/NHIS_Hierarchical_Data_Structure_Selection_1.png)
+![NHIS_Hierarchical_Data_Structure_Selection_2](../.imgs/NHIS_Hierarchical_Data_Structure_Selection_2.png)
+
+## Comparison of Means Program
+
+Rather than making a table, you may wish to compute the mean value for a variable. To compute and
+compare means, use the comparison of means program in SDA. This program calculates the mean of a
+designated "dependent variable" within categories of a "row variable."
+
+To begin, as with the frequencies/crosstabulation program, select the year(s) in which you are
+interested. Let's use the 2009 sample again. 
+
+![SDA_dataset_selection](../.imgs/SDA_dataset_selection.png)
+
+Next, select the "Means" Tabe in the analysis window.
+
+![SDA_means_selection](../.imgs/SDA_means_selection.png)
+
+Enter the variable for which you want to calculate the mean (average) as the "Dependent" variable.
+***Only enter a numerical variable here***, as those are the kind of variables for which an average can
+logically be calculated. If you enter a non-numerical variable (e.g., "sex"), SDA will still calculate a
+"mean" based on the values and frequencies of that variable, but any such "mean" will have no real
+meaning.
+
+With that in mind, let's enter "bedayr," which is the number of days during the preceding 12 months
+that illness or injury kept a person in bed for more than half the day. By consulting either the variable
+description on the NHIS website, or by entering "bedayr" in the SDA variable dictionary and clicking
+"View," we can see that the values for "bedayr" range from 0 (none) to 999 (Unknown-don't know).
+However, only 1-366 actually correspond to days in bed. 
+
+![2009_bedayr_variable_view_1](../.imgs/2009_bedayr_variable_view_1.png)
+![2009_bedayr_variable_view_2](../.imgs/2009_bedayr_variable_view_2.png)
+
+If you look at code 996, you see the label "NIU." NIU is the NHIS abbreviation for "not in universe";
+persons with this value for a variable were not asked the survey question relating to that variable. We
+would normally want to exclude anyone coded as NIU from analysis, by following the procedure
+described above for including only the valid values of the health status variable (i.e., for excluding cases
+coded as "unknown" health status). For "bedayr" we want to exclude both the NIU responses and the 3
+varieties of "Unknown" responses when calculating a mean value.
+
+Thus, we enter "bedayr" as the "Dependent" variable, with the numbers 0-366 following in parentheses.
+This restricts the input to persons with a reported number of bed days ranging from 0 to 366. If we
+wanted to calculate the average number of annual bed days within each category of health status, we
+would enter "health" as the row variable. As in the frequencies/cross-tabulation examples, we will put
+(1-5) after the health variable, to include only valid responses and exclude "unknown" responses. 
+
+Earlier we learned that the "health" variable should be used in conjunction with the "perweight" weight
+variable, according to the NHIS website. Checking the variable description for "bedayr" on the NHIS
+website tells us that that "bedayr" should be used with the "sampweight" weight variable. In such
+cases, where two different weights are specified for two variables you wish to combine, it is appropriate
+to use the "narrower" of the two weight options. Everyone in the NHIS sample has a person weight, but
+only sample persons have a sample weight. In this case, then, we should use "sampweight" as our
+weight variable. (Similarly, if the choice is between "perweight" and "mortwt", you should use
+"mortwt." If the choice is between "sampweight" and "mortwtsa," you should use "mortwtsa." See the
+[NHIS user note on weights](https://nhis.ipums.org/nhis/userNotes_weights.shtml) for more information.) 
+
+The input to get means for "bedayr" sorted by health status looks like this: 
+
+![2009_bedayr_by_health_query](../.imgs/2009_bedayr_by_health_query.png)
+
+By clicking "Run the Table" you get this output:
+
+![2009_bedayr_by_health_results](../.imgs/2009_bedayr_by_health_results.png)
+
+As with the earlier example, the box in the upper-left corner explains the numbers in each cell. The bold
+number is the mean – the average number of bed disability days for people with a given health status. In
+2009, people with excellent health had, on average, 1.09 bed disability days in the 12 months prior to
+being surveyed. By contrast, those with poor health had 56.13 bed disability days, on average, over the
+same time period. The second number in each cell is the standard error. Because NHIS uses a complex
+sample design, these standard errors are calculated in SDA using the Taylor series method. Standard
+errors are used in significance testing (see below). For more information, click on the "Complex std errs"
+link under Table Options.
+
+![complex_std_errs_output_options](../.imgs/complex_std_errs_output_options.png)
+
+The third number in each cell is the weighted number of cases used to calculate the mean. There are
+fewer total people in the population of this analysis (about 226 million) than in the cross-tabulation done above (about 301 million) because the survey question for "bedayr" is only asked of sample adults,
+rather than all persons in the NHIS sample. 
+
+## Significance Testing
