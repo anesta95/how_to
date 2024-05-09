@@ -15,9 +15,9 @@ To index numerical data, values must be adjusted so they are equal to each other
 
 To index two series of data, apply the following equation to the raw data:
 
-```math
-\hat{X}_t = \left(\frac{X_t}{X_0} \right)\cdot 100
-```
+
+$\hat{X}_t = \left(\frac{X_t}{X_0} \right)\cdot 100$
+
 
 Where $X_t$ is the raw data in a give time period, $X_0$ is the data value in the **initial** time period and $\hat{X}_t$ is the new indexed value of the variable.
 

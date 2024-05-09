@@ -12,17 +12,17 @@ In this case, the 0.92 percent translates into an annualized 2.22 percent. The 0
 ## The technical solution
 The formula for annualizing monthly data is straightforward:
 
-```math
-g_m=\left[\left(\frac{X_m}{X_{m-1}}\right)^{12}-1\right] \cdot 100
-```
+
+$g_m=\left[\left(\frac{X_m}{X_{m-1}}\right)^{12}-1\right] \cdot 100$
+
 NOTE: For quarterly data, use 4 instead of 12.
 
 where $X_m$ and $X_{m-1}$ are the values of the economic variable in months _m_ and _m-1_, respectively (for example, _m_ = February, then _m-1_ = January), and $g_m$ is the annualized percent change.
 
 For year-to-date calculations on monthly data, the formula is:
-```math
-h_m=\left[\left(\frac{X_m}{X_{Dec}}\right)^{\frac{12}{m}}-1\right] \cdot 100
-```
+
+$h_m=\left[\left(\frac{X_m}{X_{Dec}}\right)^{\frac{12}{m}}-1\right] \cdot 100$
+
 NOTE: For quarterly data, use the fourth quarter instead of December, and q = 1, 2, 3, 4 instead of m = 1, 2, 3…12.
 
 where $X_{Dec}$ is the value of the economic variable in the December of a given year, _m_ is the number of the month in question, $X_m$ is the value of the economic variable in the _m_th month of the given year, and $h_m$ is the annualized year-to-_m_ percent change.
