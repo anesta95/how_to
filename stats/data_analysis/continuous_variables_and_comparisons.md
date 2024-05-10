@@ -8,4 +8,7 @@ When we put continuous variables into categories, the categories should be the s
 
 If we make the bins on a histogram too narrow, the number in each category gets small, and random chance plays a larger role.
 
-By adding more data to a histogram we see the shape become smoother and can draw more reliable conclusions about the distribution of the continous variable. 
+By adding more data to a histogram we see the shape become smoother and can draw more reliable conclusions about the distribution of the continous variable.
+
+A bar chart is the best choice for comparing categorical variables. Pie charts are good for seeing a quantity as a proportion of the total, while histograms are used for continuous variables.
+

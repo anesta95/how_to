@@ -376,3 +376,74 @@ fewer total people in the population of this analysis (about 226 million) than i
 rather than all persons in the NHIS sample. 
 
 ## Significance Testing
+
+The procedure just covered will display the means for any numeric variable. Some SDA users may wish
+to extend their analysis further by testing whether differences between means are statistically
+significant. The NHIS data are based on a sample of people included in the National Health Interview
+Survey. Because only a small subset of the U.S. non-institutionalized population was included in NHIS,
+results based on survey responses will differ somewhat from what the results would have been if
+everyone in the United States had answered these questions. Significance testing provides a means of
+evaluating how confident we are that differences (e.g., in means) observed with survey respondents
+would also be observed in the general population. 
+
+After incorporating all the information noted above, our input to calculate the mean of bedayr within
+health status categories looks like this: 
+
+![2009_bedayr_by_health_significance_test](../.imgs/2009_bedayr_by_health_significance_test.png)
+
+Clicking on "Run the Table" yields this output:
+
+![2009_bedayr_by_health_significance_test_results](../.imgs/2009_bedayr_by_health_significance_test_results.png)
+
+There are now 4 numbers in each output cell (except for the "Excellent" cell, which serves as our
+reference point). The bold numbers are the difference in means for "bedayr" relative to the "bedayr"
+mean for those in excellent health. They report the difference in average number of days spent in bed
+due to illness or injury in the past year by people with the specified health status. For example, people
+in good health had an average of 3 more bed disability days than those in excellent health during the 12
+months prior to taking the survey. People with poor health had an average of 55 more days of bed
+disability than those in excellent health.
+
+The second and third numbers are again the standard error and weighted N, respectively. 
+
+The final number in each cell is the T-statistic. This figure indicates whether a difference in means is
+"statistically significant." Statistical significance in this case refers to the probability that a difference of
+means observed in the sample would be observed in the population. Generally, a T-statistic of at least
++1.96 (or less than -1.96) indicates statistical significance (i.e., highly probable that the means are
+different in the population). The T-statistic is greater than +1.96 for every category of health, meaning
+that in the population, it is likely the mean number of bed disability days is higher for people in each
+health category 2-5 (very good-poor) relative to the people in health category 1 (excellent). 
+
+As with the frequencies and cross-tabulation program, we can also use recoded variables and apply
+control variables or selection filters in conjunction with calculating means. As an example, let's re-run
+this comparison of means using our recoded age variable as the "Row" variable. This time let's set our
+base category to 4 (people in their 40's). 
+
+![2009_bedayr_by_age_sig_test](../.imgs/2009_bedayr_by_age_sig_test.png)
+
+By clicking "Run the Table", we get this output:
+
+![2009_bedayr_by_age_sig_test_results](../.imgs/2009_bedayr_by_age_sig_test_results.png)
+
+Now the difference in average number of bed disability days is reported relative to people in their 40's.
+Here we see that people in the oldest age group have 3.8 more bed disability days per year, on average,
+than people in their 40's. The T-statistic of 2.28 indicates that this difference is statistically significant
+(i.e., probably would be observed in the population, not just the sample). By contrast, those in their 20's
+have, on average, 2.3 fewer bed disability days per year than those in their 40's. The T-statistic of -2.98
+indicates that this difference in means (between 20's and 40's) is also statistically significant. Notice that
+the T-statistics for people in their 60's and 70's are not large enough to indicate statistical significance.
+This means that, in the population, it is not very probable that the mean bed disability days for those
+age groups are different from the mean bed disability days of people in their 40's. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
