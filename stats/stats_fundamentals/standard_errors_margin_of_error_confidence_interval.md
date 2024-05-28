@@ -73,7 +73,28 @@ The next example shows that it may be difficult to draw conclusions about differ
 
 Values from $0.06 to $0.11 fall within the 90% confidence intervals for both industries. Thus, at the relevant level of precision, all values within the range of $0.06 to $0.11 are plausible values for either industry. That is, the comparative statement that retirement and savings costs for professional and business services workers is larger than costs for those in education and health services workers does not pass the statistical significance test.
 
+## Converting Relative Standard Error to Margin of Error
+
+The 95% confidence interval is the interval centered on the sample-based estimate and includes all values within 1.96 times the estimate's standard error. For a 90% confidence interval it's all values within 1.645 times the estimate's standard error and for a 99% confidence interval it's 2.576 times the estimate's standard error. If several different samples were selected to estimate the population value (such as an injury or illness incidence rare), the 95% confidence interval would mean that one would be 95% certain that the range of these sample based estimates would include the true population value.
+
+To calculate the 95% confidence intervale gven the percent RSE (relative stanard error) from an estimate:
+
+1. Divde the percent RSE by 100 and multiply the result by the estimate to determine the standard error
+2. Multiply the standard error by 1.96 to determin the margin of error (MOE).
+3. The estimate plus or minus the MOE is the 95% confidence interval.
+
+For a 90% or 99% confidence interval, substitute out 1.96 for 1.645 or 2.576, respectively.
+
+### Examples
+
+The incidence rate of total recordable cases (TRC) of nonfatal injuries and illnesses of 6.9 cases per 100 full-time equivalent (FTE) workers for the nursing care facilities industry (NAICS 6231) in 2015 had an estimated relative standard error of 1.3 percent. Hence, we are 95-percent confident that the true TRC rate for the nursing care facilities industry lies in the interval between 6.7 and 7.1 (or 6.9 $\pm$ (1.96 x 6.9 x 0.013)).
+
+If the fatal injury rate for an occupation is 15.6 per 100,000 FTE workers in 2015, and the margin of error reported is 0.4, we are 95-percent confident that the true fatal injury rate for this occupation lies in the interval between 15.2 and 16.0 (or 15.6 $\pm$ (0.4)).
+
 
 ## Sources
 * [BLS Relative Standard Errors](https://www.bls.gov/ecec/factsheets/ecec-relative-standard-errors.htm)
 * [US Census Bureau Understanding Error and Determining Statistical Significance](https://www.census.gov/content/dam/Census/library/publications/2021/acs/acs_aian_handbook_2021_ch07.pdf)
+* [Injuries, Illnesses, and Fatalities: Reliability of Estimates](https://www.bls.gov/iif/additional-resources/reliability-of-estimates.htm)
+
+
