@@ -1,0 +1,103 @@
+# [Visualizing ACS estimates over time](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html#visualizing-acs-estimates-over-time)
+
+Section [3.4.2](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#preparing-time-series-acs-estimates) covered how to obtain a time series of ACS estimates to explore 
+temporal demographic shifts. While the output table usefully represented the 
+time series of educational attainment in Colorado counties, data visualization 
+is also commonly used to illustrate change over time. Arguably the most common 
+chart type chosen for time-series visualization is the line chart, which *ggplot2* 
+handles capably with the `geom_line()` function.
+
+For an illustrative example, we’ll obtain 1-year ACS data from 2005 through 2019 
+on median home value for Deschutes County, Oregon, home to the city of Bend and 
+large numbers of in-migrants in recent years from the Bay Area in California. 
+As in Chapter 3, `map_dfr()` is used to iterate over a named vector of years, 
+creating a time-series dataset of median home value in Deschutes County since 2005, 
+and we use the formula specification for anonymous functions so that `~ .x` 
+translates to `function(x) x`.
+
+```{r}
+years <- 2005:2019
+names(years) <- years
+
+deschutes_value <- list_rbind(
+  map(years, ~{
+    get_acs(
+      geography = "county",
+      variables = "B25077_001",
+      state = "OR",
+      county = "Deschutes",
+      year = .x,
+      survey = "acs1"
+    )
+  }), names_to = "year"
+  ) 
+
+deschutes_value
+```
+
+This information can be visualized with familiar *ggplot2* syntax. `deschutes_value` 
+is specified as the input dataset, with `year` mapped to the X-axis and `estimate` 
+mapped to the y-axis. The argument `group = 1` is used to help *ggplot2* understand 
+how to connect the yearly data points with lines given that only one county is 
+being visualized. `geom_line()` then draws the lines, and we layer points on top 
+of the lines as well to highlight the actual ACS estimates.
+
+```{r}
+ggplot(deschutes_value, aes(x = year, y = estimate, group = 1)) +
+  geom_line() +
+  geom_point()
+```
+
+The chart shows rising home values prior to the 2008 recession; 
+a notable drop after the housing market crash; and rising values since 2011, 
+reflecting increased demand from wealthy in-migrants from locations like the Bay Area. 
+Given what we have learned in previous sections, there are also several opportunities 
+for chart cleanup. This can include more intuitive tick and axis labels; 
+a re-designed visual scheme; and a title and caption. We can also build the 
+margin of error information into the line chart like we did in the previous section. 
+We’ll use the *ggplot2* function `geom_ribbon()` to draw the margin of error interval 
+around the line, helping represent uncertainty in the ACS estimates.
+
+```{r}
+ggplot(deschutes_value, aes(x = year, y = estimate, group = 1)) +
+  geom_ribbon(aes(ymax = estimate + moe, ymin = estimate - moe),
+              fill = "navy",
+              alpha = 0.4) +
+  geom_line(color = "navy") +
+  geom_point(color = "navy", size = 2) +
+  theme_minimal(base_size = 12) +
+  scale_y_continuous(labels = label_dollar(scale = .001, suffix = "k")) +
+  labs(
+    title = "Median home value in Deschutes County, OR",
+    x = "Year",
+    y = "ACS estimate",
+    caption = "Shaded area represents margin of error around the ACS estimate"
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

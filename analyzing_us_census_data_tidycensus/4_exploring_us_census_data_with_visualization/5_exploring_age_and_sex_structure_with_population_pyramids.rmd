@@ -1,0 +1,123 @@
+# [4.5 Exploring age and sex structure with population pyramids](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html#visualizing-acs-estimates-over-time)
+
+A common method for visualizing the demographic structure of a particular area 
+is the __population pyramid__. Population pyramids are typically constructed by 
+visualizing population size or proportion on the x-axis; age cohort on the y-axis; 
+and sex is represented categorically with male and female bars mirrored around a 
+central axis.
+
+## 4.5.1 Preparing data from the Population Estimates API
+
+We can illustrate this type of visualization using data from the 
+Population Estimates API for the state of Utah. 
+We first obtain data using the `get_estimates()` function in *tidycensus* for 
+2019 population estimates from the Census Bureau’s Population Estimates API.
+
+```{r}
+utah <- get_estimates(
+  geography = "state",
+  state = "UT",
+  product = "characteristics",
+  breakdown = c("SEX", "AGEGROUP"),
+  breakdown_labels = T,
+  year = 2019
+)
+
+utah
+```
+
+The function returns a long-form dataset in which each row represents population 
+values broken down by age and sex for the state of Utah. However, there are some 
+key issues with this dataset that must be addressed before constructing a 
+population pyramid. First, several rows represent values that we don’t need for
+our population pyramid visualization. For example, the first few rows in the
+dataset represent population values for "Both sexes" or for "All ages". 
+In turn, it will be necessary to isolate those rows that represent five-year age
+bands by sex, and remove the rows that do not. This can be resolved with some
+data wrangling using tidyverse tools.
+
+In the dataset returned by `get_estimates()`, five-year age bands are identified 
+in the `AGEGROUP` column beginning with the word `"Age"`. We can filter this dataset
+for rows that match this pattern, and remove those rows that represent both sexes. 
+This leaves us with rows that represent five-year age bands by sex. 
+However, to achieve the desired visual effect, data for one sex must mirror 
+another, split by a central vertical axis. To accomplish this, we can set the
+values for all `Male` values to negative.
+
+```{r}
+utah_filtered <- filter(utah, str_detect(AGEGROUP, "^Age"),
+                        SEX != "Both sexes") %>% 
+  mutate(value = ifelse(SEX == "Male", -value, value))
+
+utah_filtered
+```
+
+## 4.5.2 Designing and styling the population pyramid
+
+The data are now ready for visualization. The core components of the pyramid 
+visualization require mapping the population value and the age group to the chart
+axes. Sex can be mapped to the `fill` aesthetic allowing for the plotting of these
+categories by color
+
+```{r}
+ggplot(utah_filtered, aes(x = value, y = AGEGROUP, fill = SEX)) +
+  geom_col()
+```
+
+The visualization represents a functional population pyramid that is nonetheless 
+in need of some cleanup. In particular, the axis labels are not informative; 
+the y-axis tick labels have redundant information (“Age” and “years”); 
+and the x-axis tick labels are difficult to parse. Cleaning up the plot allows 
+us to use some additional visualization options in *ggplot2*. In addition to 
+specifying appropriate chart labels, we can format the axis tick labels by using
+appropriate `scale_*` functions in *ggplot2* and setting the X-axis limits to show
+both sides of 0 equally. In particular, this involves the use of custom absolute
+values to represent population sizes, and the removal of redundant age group
+information. We’ll also make use of an alternative *ggplot2* theme, 
+`theme_minimal()`, which uses a white background with muted gridlines.
+
+```{r}
+utah_pyramid <- ggplot(
+  utah_filtered,
+  aes(
+    x = value,
+    y = AGEGROUP,
+    fill = SEX
+  )
+) +
+  geom_col(width = 0.95, alpha = 0.75) +
+  theme_minimal(base_family = "Verdana",
+                base_size = 12) +
+  scale_x_continuous(
+    labels = ~number_format(scale = .001, suffix = "k")(abs(.x)),
+    limits = 140000 * c(-1,1)
+  ) +
+  scale_y_discrete(labels = ~str_remove_all(.x, "Age\\s|\\syears")) +
+  scale_fill_manual(values = c("darkred", "navy")) +
+  labs(
+    x = "",
+    y = "2019 Census Bureau population estimate",
+    title = "Population structure in Utah",
+    fill = "",
+    caption = "Data source: US Census Bureau population estimates & tidycensus R package"
+    )
+
+utah_pyramid
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,202 @@
+# [4.2 Customizing ggplot2 visualizations](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html#customizing-ggplot2-visualizations)
+
+The attractive defaults of *ggplot2* visualizations allow for the creation of 
+legible graphics with little to no customization. This helps greatly with 
+exploratory data analysis tasks where the primary audience is the analyst 
+exploring the dataset. Analysts planning to present their work to an external 
+audience, however, will want to customize the appearance of their plots beyond 
+the defaults to maximize interpretability. This section covers how to take a 
+Census data visualization that is relatively illegible by default and polish 
+it up for eventual presentation and export from R.
+
+In this example, we will create a visualization that illustrates the percent of 
+commuters that take public transportation to work for the largest metropolitan 
+areas in the United States. The data come from the 2019 1-year American 
+Community Survey Data Profile, variable `DP03_0021P`. 
+To determine this information, we can use *tidyverse* tools to sort our data by 
+descending order of a summary variable representing total population and then 
+retaining the 20 largest metropolitan areas by population using the `slice_max()` 
+function.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+
+metros <- get_acs(
+  geography = "cbsa",
+  variables = "DP03_0021P",
+  summary_var = "B01003_001",
+  survey = "acs1",
+  year = 2019
+) %>% 
+  slice_max(summary_est, n = 20)
+```
+
+The returned data frame has 7 columns, as is standard for `get_acs()` with a 
+summary variable, but has 20 rows as specified by the `slice_max()` command. 
+While the data can be filtered and sorted further to facilitate comparative 
+analysis, it also can be represented succinctly with a visualization. 
+The tidy format returned by `get_acs()` is well-suited for visualization with *ggplot2*.
+
+In the basic example below, we can create a bar chart comparing public 
+transportation as commute share for the most populous metropolitan areas in the 
+United States with a minimum of code. The first argument to `ggplot()` in the 
+example below is the name of our dataset; the second argument is an aesthetic 
+mapping of columns to plot elements, specified inside the `aes()` function. 
+This plot initialization is then linked with the `+` operator to the `geom_col()` 
+function to create a bar chart.
+
+```{r}
+ggplot(metros, aes(x = NAME, y = estimate)) + geom_col()
+```
+
+While the above chart is a visualization of the `metros` dataset, 
+it tells us little about the data given the lack of necessary formatting. 
+The x-axis labels are so lengthy that they overlap and are impossible to read; 
+the axis titles are not intuitive; and the data are not sorted, 
+making it difficult to compare similar observations.
+
+## 4.2.1 Improving plot legibility
+Fortunately, the plot can be made more legible by cleaning up the metropolitan 
+area name, re-ordering the data in descending order, then adding layers to the 
+plot definition. Additionally, *ggplot2* visualization can be used in combination 
+with *magrittr* piping and *tidyverse* functions, allowing analysts to string 
+together data manipulation and visualization processes.
+
+Our first step will be to format the `NAME` column in a more intuitive way. 
+The `NAME` column by default provides a description of each geography as formatted 
+by the US Census Bureau. However, a detailed description like 
+`"Atlanta-Sandy Springs-Roswell, GA Metro Area"` is likely unnecessary for our chart, 
+as the same metropolitan area can be represented on the chart by the name of its 
+first principal city, which in this case would be `"Atlanta"`. To accomplish this, 
+we can overwrite the `NAME` column by using the tidyverse function `str_remove()`, 
+found in the *stringr* package. The example uses _regular expressions_ to first 
+remove all the text after the first dash, then remove the text after the first
+comma if no dash was originally present. These two subsequent calls to `mutate()`
+will account for the various ways that metropolitan area names are specified.
+
+On the chart, the legibility can be further improved by mapping the metro name 
+to the y-axis and the ACS estimate to the x-axis, and plotting the points in 
+descending order of their estimate values. The ordering of points in this way 
+is accomplished with the `reorder()` function, used inside the call to `aes()`. 
+As the result of the `mutate()` operations is piped to the `ggplot()` function in 
+this example with the %>% operator, the dataset argument to `ggplot()` is inferred
+by the function.
+
+```{r}
+metros %>% 
+  mutate(NAME = str_remove(str_remove(NAME, "-.*$"), ",.*$")) %>% 
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) + geom_col()
+```
+
+The plot is much more legible after our modifications. 
+Metropolitan areas can be directly compared with one another, and the metro area 
+labels convey enough information about the different places without overwhelming 
+the plot with long axis labels. However, the plot still lacks information to 
+inform the viewer about the plot’s content. This can be accomplished by specifying 
+_labels_ inside the `labs()` function. In the example below, we’ll specify a title and 
+subtitle, and modify the X and Y axis labels from their defaults.
+
+```{r}
+metros %>% 
+  mutate(NAME = str_remove(str_remove(NAME, "-.*$"), ",.*$")) %>% 
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) + geom_col() +
+  theme_minimal() +
+  labs(
+    title = "Public transit commute share",
+    subtitle = "2019 1-year ACS estimate",
+    y = "",
+    x = "ACS estimate",
+    caption = "Source: ACS Data Profile variable DP03_0021P via the tidycensus R package"
+  )
+```
+
+The inclusion of labels provides key information about the contents of the plot 
+and also gives it a more polished look for presentation.
+
+## 4.2.2 Custom styling of ggplot2 charts
+
+While an analyst may be comfortable with the plot as-is, *ggplot2* allows for 
+significant customization with respect to stylistic presentation. 
+The example below makes a few such modifications. This includes styling the 
+bars on the plot with a different color and internal transparency; 
+changing the font; and customizing the axis tick labels.
+
+```{r}
+library(scales)
+
+metros %>% 
+  mutate(NAME = str_remove(str_remove(NAME, "-.*$"), ",.*$")) %>% 
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) + 
+  geom_col(color = "navy", fill = "navy",
+           alpha = 0.5, width = 0.85) +
+  theme_minimal(base_size = 12, base_family = "Verdana") +
+  scale_x_continuous(labels = label_percent(scale = 1)) +
+  labs(
+    title = "Public transit commute share",
+    subtitle = "2019 1-year ACS estimate",
+    y = "",
+    x = "ACS estimate",
+    caption = "Source: ACS Data Profile variable DP03_0021P via the tidycensus R package"
+  )
+```
+
+The code used to produced the styled graphic uses the following modifications:
+
+* While aesthetic mappings relative to a column in the input dataset will be 
+specified in a call to `aes()`, *ggplot2* geoms can be styled directly in their 
+corresponding functions. Bars in *ggplot2* are characterized by both a __color__, 
+which is the outline of the bar, and a __fill__. The above code sets both to `"navy"` 
+then modifies the internal transparency of the bar with the `alpha` argument. 
+Finally, `width = 0.85` slightly increases the spacing between bars.
+
+* In the call to `theme_minimal()`, `base_size` and `base_family` parameters are available. 
+`base_size` specifies the base font size to which plot text elements will be drawn; 
+this defaults to 11. In many cases, you will want to increase `base_size` to improve plot legibility. 
+`base_family` allows you to change the font family used on your plot. 
+In this example, `base_family` is set to `"Verdana"`, but you can use any font 
+families accessible to R from your operating system. 
+To check this information, use the `system_fonts()` function in the *systemfonts* 
+package (Pedersen, Ooms, and Govett 2021).
+
+* The `scale_x_continuous()` function is used to customize the X-axis of the plot. 
+The `labels` parameter can accept a range of values including a function (used here) 
+or formula that operates over the tick labels. The *scales* 
+([Wickham and Seidel, n.d.](https://walker-data.com/census-r/references.html#ref-scales)) 
+package contains many useful formatting functions to 
+neatly present tick labels, such as `label_percent()`, `label_dollar()`, and `label_date()`. 
+The functions also accept arguments to modify the presentation.
+
+## 4.2.3 Exporting data visualizations from R
+
+Once an analyst has settled on a visualization design, 
+they may want to export their image from R to display on a website, 
+in a blog post, or in a report. Plots generated in RStudio can be exported with 
+the *Export > Save as Image* command; however, analysts who want more programmatic 
+control over their image exports can script this with *ggplot2*. 
+The `ggsave()` function in *ggplot2* will save the last plot generated to an image 
+file in the user’s current working directory by default. The specified file 
+extension will control the output image format, e.g. `.png`.
+
+```{r}
+ggsave("metro_transit.png")
+```
+
+`ggsave()` includes a variety of options for more fine-grained control over the image output. 
+Common options used by analysts will be `width` and `height` to control the image size; 
+`dpi` to control the image resolution (in dots per inch); and `path` to specify the 
+directory in which the image will be located. For example, the code below would 
+write the most recent plot generated to an 8 inch by 5 inch image file in a 
+custom location with a resolution of 300 dpi.
+
+```{r}
+ggsave(
+  filename = "metro_transit.png",
+  path = "../../imgs",
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 300
+)
+```
+

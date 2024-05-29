@@ -1,0 +1,237 @@
+# [3.4 Comparing ACS estimates over time](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#comparing-acs-estimates-over-time)
+
+A common task when working with Census data is to examine demographic change over time. 
+Data from the Census API - and consequently **tidycensus** - only go back to the 2000 Decennial Census. 
+For historical analysts who want to go even further back, 
+decennial Census data are available since 1790 from the [National HistoricalGeographic Information System](https://www.nhgis.org/), 
+or NHGIS, which will be covered in detail in Chapter 11.
+
+## 3.4.1 Time-series analysis: some cautions
+
+Before engaging in any sort of time series analysis of Census data, analysts need to account for potential problems that can emerge when using Census data longitudinally. One major issue that can emerge is geography changes over time. For example, let’s say we are interested in analyzing data on Oglala Lakota County, South Dakota.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+
+oglala_lakota_age <- get_acs(
+  geography = "county",
+  state = "SD",
+  county = "Oglala Lakota",
+  table = "B01001",
+  year = 2020
+)
+```
+
+To understand how the age composition of the county has changed over the past 10 years, 
+we may want to look at the 2006-2010 ACS for the county. 
+Normally, we would just change the year argument to `2010`:
+
+```{r}
+oglala_lakota_age_10 <- get_acs(
+  geography = "county",
+  state = "SD",
+  county = "Oglala Lakota",
+  table = "B01001",
+  year = 2010
+)
+```
+
+The problem here is that Oglala Lakota County had a different name in 2010, 
+Shannon County, meaning that the `county = "Oglala Lakota"` argument will not 
+return any data. In turn, the equivalent code for the 2006-2010 ACS would use 
+`county = "Shannon"`.
+
+```{r}
+oglala_lakota_age_10 <- get_acs(
+  geography = "county",
+  state = "SD",
+  county = "Shannon",
+  table = "B01001",
+  year = 2010
+)
+```
+
+Note the differences in the GEOID column between the two tables of data. 
+When a county or geographic entity changes its name, the Census Bureau assigns it a new GEOID, 
+meaning that analysts need to take care when dealing with those changes. 
+A full listing of geography changes [is available on the Census website for each year](https://www.census.gov/programs-surveys/acs/technical-documentation/table-and-geography-changes.2019.html).
+
+In addition to changes in geographic identifiers, variable IDs can change over time as well. 
+For example, the ACS Data Profile is commonly used for pre-computed normalized ACS estimates. 
+Let’s say that we are interested in analyzing the percentage of residents age 25 and 
+up with a 4-year college degree for counties in Colorado from the 2019 1-year ACS. 
+We’d first look up the appropriate variable ID with `load_variables(2019, "acs1/profile")` then use `get_acs()`:
+
+```{r}
+co_college19 <- get_acs(
+  geography = "county",
+  variables = "DP02_0068P",
+  state = "CO",
+  survey = "acs1",
+  year = 2019
+)
+```
+
+We get back data for counties of population 65,000 and greater as these are the 
+geographies available in the 1-year ACS. The data make sense: 
+Boulder County, home to the University of Colorado, has a very high percentage 
+of its population with a 4-year degree or higher. 
+However, when we run the exact same query for the 2018 1-year ACS:
+
+```{r}
+co_college18 <- get_acs(
+  geography = "county",
+  variables = "DP02_0068P",
+  state = "CO",
+  survey = "acs1",
+  year = 2018
+)
+```
+
+The values are completely different, and clearly not percentages! 
+This is because variable IDs for the Data Profile **are unique to each year** and 
+in turn should not be used for time-series analysis. 
+The returned results above represent the civilian population age 18 and up, 
+and have nothing to do with educational attainment.
+
+## 3.4.2 Preparing time-series ACS estimates
+
+The safest option for time-series analysis in the ACS is to use the Comparison Profile Tables. 
+These tables are available for both the 1-year and 5-year ACS, and 
+allow for comparison of demographic indicators over the past five years for a given year. 
+Using the Comparison Profile tables also brings the benefit of additional variable harmonization, 
+such as inflation-adjusted income estimates.
+
+Data from the Comparison Profile are accessed just like other ACS variables using `get_acs()`. 
+The example below illustrates how to get data from the ACS Comparison Profile on 
+inflation-adjusted median household income for counties and county-equivalents in Alaska.
+
+```{r}
+ak_income_compare <- get_acs(
+  geography = "county",
+  variables = c(
+    income15 = "CP03_2015_062",
+    income20 = "CP03_2020_062"
+  ),
+  state = "AK",
+  year = 2020
+)
+```
+
+For the 2016-2020 ACS, the “comparison year” is 2015, representing the closest 
+non-overlapping 5-year dataset, which in this case is 2011-2015. 
+We can examine the results, which are inflation-adjusted for appropriate comparison:
+
+```{r}
+ak_income_compare
+```
+
+### 3.4.2.1 Iterating over ACS years with tidyverse tools
+
+Using the Detailed Tables also represents a safer option than the Data Profile, 
+as it ensures that variable IDs will remain consistent across years allowing for consistent and correct analysis. 
+That said, there still are some potential pitfalls to account for when using the Detailed Tables. 
+The Census Bureau will add and remove variables from survey to survey depending on data needs and data availability. 
+For example, questions are sometimes added and removed from the ACS survey meaning that 
+you won’t always be able to get every data point for every year and geography combination. 
+In turn, it is still important to check on data availability using `load_variables()` 
+for the years you plan to analyze before carrying out your time-series analysis.
+
+Let’s re-engineer the analysis above on educational attainment in Colorado counties, 
+which below will be computed for a time series from 2010 to 2019. Information on 
+“bachelor’s degree or higher” is split by sex and across different tiers of educational 
+attainment in the detailed tables, found in ACS table 15002. Given that we only need 
+a few variables (representing estimates of populations age 25+ who have finished 
+a 4-year degree or graduate degrees, by sex), 
+we’ll request those variables directly rather than the entire B15002 table.
+
+```{r}
+college_vars <- c("B15002_015",
+                  "B15002_016",
+                  "B15002_017",
+                  "B15002_018",
+                  "B15002_032",
+                  "B15002_033",
+                  "B15002_034",
+                  "B15002_035")
+```
+
+We’ll now use these variables to request data on college degree holders from the ACS 
+for counties in Colorado for each of the 1-year ACS surveys from 2010 to 2019. 
+In most cases, this process should be streamlined with iteration. 
+Thus far, we are familiar with using the year argument in `get_acs()` to request 
+data for a specific year. Writing out ten different calls to `get_acs()`, 
+however - one for each year - would be tedious and would require a fair amount of 
+repetitive code! Iteration helps us avoid repetitive coding as it allows us to 
+carry out the same process over a sequence of values. Programmers familiar with 
+iteration will likely know of “loop” operators like `for` and `while`, which are available
+in base R and most other programming languages in some variety. 
+Base R also includes the `*apply()` family of functions (e.g. `lapply()`, `mapply()`, `sapply()`), 
+which iterates over a sequence of values and applies a given function to each value.
+
+The tidyverse approach to iteration is found in the **purrr** package. 
+**purrr** includes a variety of functions that are designed to integrate well 
+in workflows that require iteration and use other tidyverse tools. 
+The `map_*()` family of functions iterate over values and try to return a desired result; 
+`map()` returns a list, `map_int()` returns an integer vector, 
+and `map_chr()` returns a character vector, for example. 
+With tidycensus, the `map_dfr()` function is particularly useful. 
+`map_dfr()` iterates over an input and applies it to a function or process defined by the user, 
+then row-binds the result into a single data frame. 
+The example below illustrates how this works for the years 2010 through 2019.
+
+```{r}
+years <- 2010:2019
+names(years) <- years
+
+# Updated with new version of purrr 1.0.0
+
+college_by_year <- list_rbind(
+  map(years, ~{
+   get_acs(
+     geography = "county",
+     variables = college_vars,
+     state = "CO",
+     summary_var = "B15002_001",
+     survey = "acs1",
+     year = .x
+   ) 
+  }
+  ), names_to = "year"
+)
+```
+
+The `names_to` argument, which is optional but used here, creates a new column in the 
+output data frame that contains values equivalent to the names of the input object, 
+which in this case is years. By setting `names_to = "year"` we tell `list_rbind()` 
+to name the new column that will contain these values `year`.
+
+Let's review the result:
+
+```{r}
+college_by_year %>% 
+  arrange(NAME, variable, year)
+```
+
+The result is a long-form dataset that contains a time series of each requested 
+ACS variable for each county in Colorado that is available in the 1-year ACS. 
+The code below outlines a `group_by() %>% summarize()` workflow for calculating 
+the percentage of the population age 25 and up with a 4-year college degree, 
+then uses the `pivot_wider()` function from the tidyr package to spread the years 
+across the columns for tabular data display.
+
+```{r}
+college_by_year %>% 
+  group_by(NAME, year) %>% 
+  summarize(numerator = sum(estimate),
+            denominator = first(summary_est)) %>% 
+  mutate(pct_college = 100 * (numerator / denominator)) %>% 
+  pivot_wider(id_cols = NAME,
+              names_from = year,
+              values_from = pct_college)
+```
+
+This particular format is suitable for data display or writing to an Excel 
+spreadsheet for colleagues who are not R-based. Methods for visualization of 
+time-series estimates from the ACS will be covered in Section [4.4](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html#visualizing-acs-estimates-over-time).

@@ -1,0 +1,90 @@
+# [3.3 Group-wise Census data analysis](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#group-wise-census-data-analysis)
+The split-apply-combine model of data analysis, as discussed in Wickham ([2011](https://walker-data.com/census-r/references.html#ref-wickham2011)), is a powerful framework for analyzing demographic data. In general terms, an analyst will apply this framework as follows:
+
+* The analyst identifies salient groups in a dataset between which they want to make comparisons. The dataset is then **split** into multiple pieces, one for each group.
+
+* A function is then **applied** to each group in turn. This might be a simple summary function, such as taking the maximum or calculating the mean, or a custom function defined by the analyst.
+
+* Finally, the results of the function applied to each group are **combined** back into a single dataset, allowing the analyst to compare the results by group.
+
+In the tidyverse, split-apply-combine is implemented with the `group_by()` function in the dplyr package. `group_by()` does the work for the analyst of splitting a dataset into groups, allowing subsequent functions used by the analyst in an analytic pipeline to be applied to each group then combined back into a single dataset. The examples that follow illustrate some common group-wise analyses.
+
+## [3.3.1 Making group-wise comparisons](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#making-group-wise-comparisons)
+
+The `az_race_percent` dataset created above is an example of a dataset suitable for group-wise data analysis. It includes two columns that could be used as group definitions: `NAME`, representing the county, and `variable`, representing the racial or ethnic group. Split-apply-combine could be used for either group definition to make comparisons for data in Arizona across these categories.
+
+We can deploy group-wise data analysis to identify the largest racial or ethnic group in each county in Arizona. This involves setting up a data analysis pipeline with the **magrittr** pipe and calculating a _grouped filter_ where the `filter()` operation will be applied specific to each group. In this example, the filter condition will be specified as `percent == max(percent)`. We can read the analytic pipeline then as “Create a new dataset, `largest_group`, by using the `az_race_dataset` THEN grouping the dataset by the `NAME` column THEN filtering for rows that are equal to the maximum value of `percent` for each group.”
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+
+az_race <- get_acs(
+  geography = "county",
+  state = "AZ",
+  variables = race_vars,
+  summary_var = "B03002_001",
+  year = 2020
+)
+
+az_race_percent <- az_race %>%
+    mutate(percent = 100 * (estimate / summary_est)) %>%
+    select(NAME, variable, percent)
+```
+
+
+```{r}
+largest_group <- az_race_percent %>% 
+  group_by(NAME) %>% 
+  filter(percent == max(percent))
+```
+
+`group_by()` is commonly paired with the `summarize()` function in data analysis pipelines. `summarize()` generates a new, condensed dataset that by default returns a column for the grouping variable(s) and columns representing the results of one or more functions applied to those groups. In the example below, the `median()` function is used to identify the median percentage for each of the racial & ethnic groups in the dataset across counties in Arizona. In turn, `variable` is passed to `group_by()` as the grouping variable.
+
+```{r}
+az_race_percent %>% 
+  group_by(variable) %>% 
+  summarize(median_pct = median(percent))
+```
+
+## [3.3.2 Tabulating new groups](https://walker-data.com/census-r/wrangling-census-data-with-tidyverse-tools.html#tabulating-new-groups)
+
+Commonly, analysts will also need to calculate new custom groups to address specific analytic questions. For example, variables in ACS table B19001 represent groups of households whose household incomes fall into a variety of categories: less than \$10,000/year, between \$10,000/year and \$19,999/year, and so forth. These categories may be more granular than needed by an analyst. As such, an analyst might take the following steps: 1) recode the ACS variables into wider income bands; 2) group the data by the wider income bands; 3) calculate grouped sums to generate new estimates.
+
+Consider the following example:
+
+```{r}
+mn_hh_income <- get_acs(
+  geography = "county",
+  table = "B19001",
+  state = "MN",
+  year = 2016
+)
+```
+
+Our data include household income categories for each county in the rows. However, let’s say we only need three income categories for purposes of analysis: below \$35,000/year, between \$35,000/year and \$75,000/year, and \$75,000/year and up.
+
+
+We first need to do some transformation of our data to recode the variables appropriately. First, we will remove variable `B19001_001`, which represents the total number of households for each county. Second, we use the `case_when()` function from the **dplyr** package to identify groups of variables that correspond to our desired groupings. Given that the variables are ordered in the ACS table in relationship to the household income values, the less than operator can be used to identify groups.
+
+The syntax of `case_when()` can appear complex to beginners, so it is worth stepping through how the function works. Inside the `mutate()` function, which is used to create a new variable named `incgroup`, `case_when()` steps through a series of logical conditions that are evaluated in order similar to a series of if/else statements. The first condition is evaluated, telling the function to assign the value of `below35k` to all rows with a `variable` value that comes before `"B19001_008"` - which in this case will be `B19001_002` (income less than \$10,000) through `B19001_007` (income between \$30,000 and \$34,999). The second condition is then evaluated _for all those rows not accounted for by the first condition_. This means that `case_when()` knows not to assign `"bw35kand75k"` to the income group of $10,000 and below even though its variable comes before `B19001_013`. The final condition in `case_when()` can be set to `TRUE` which in this scenario translates as "all other values."
+
+```{r}
+mn_hh_income_recode <- mn_hh_income %>% 
+  filter(variable != "B19001_001") %>% 
+  mutate(incgroup = case_when(
+    variable < "B19001_008" ~ "below35k",
+    variable < "B19001_013" ~ "bw35kand75k",
+    T ~ "above75k"
+  ))
+```
+
+Our result illustrates how the different variable IDs are mapped to the new, recoded categories that we specified in `case_when()`. The `group_by() %>% summarize()` workflow can now be applied to the recoded categories by county to tabulate the data into a smaller number of groups.
+
+```{r}
+mn_group_sums <- mn_hh_income_recode %>% 
+  group_by(GEOID, incgroup) %>% 
+  summarize(estimate = sum(estimate))
+```
+
+Our data now reflect the new estimates by group by county.
