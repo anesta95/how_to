@@ -1,0 +1,233 @@
+# [4.7 Advanced visualization with ggplot2 extension](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html#advanced-visualization-with-ggplot2-extensions)
+
+While the core functionality of **ggplot2** is very powerful, a notable advantage
+of using **ggplot2** for visualization is the contributions made by its user 
+community in the form of _extensions_. **ggplot2** extensions are packages developed 
+by practitioners outside the core **ggplot2** development team that add functionality 
+to the package. I encourage you to [review the gallery of ggplot2 extensions from 
+the extensions website](https://exts.ggplot2.tidyverse.org/); 
+I highlight some notable examples below.
+
+## ggridges
+
+The **ggridges** package adapts the concept of the faceted density plot to 
+generate _ridgeline plots_, in which the densities overlap one another. 
+The example below creates a ridgeline plot using the Portland-area home value data; 
+`geom_density_ridges()` generates the ridgelines, and `theme_ridges()` styles the 
+plot in an appropriate manner.
+
+```{r}
+library(ggridges)
+
+ggplot(housing_val2, aes(x = estimate, y = county)) +
+  geom_density_ridges() +
+  theme_ridges() +
+  labs(x = "Median home value: 2016-2020 ACS estimate",
+       y = "") +
+  scale_x_continuous(labels = label_dollar(scale = .000001, suffix = "m"),
+                     breaks = c(0, 5e5, 1e6)) +
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+The overlapping density “ridges” offer both a pleasing aesthetic but also a 
+practical way to compare the different data distributions. As **ggridges** extends 
+**ggplot2**, analysts can style the different chart components to their liking using 
+the methods introduced earlier in this chapter.
+
+## 4.7.2 ggbeeswarm
+
+The **ggbeeswarm** package extends
+
+ggplot2 by allowing users to generate _beeswarm_ plots, in which clouds of points 
+are jittered to show the overall density of a distribution of data values. 
+Beeswarm plots can be compelling ways to visualize multiple data variables on a chart, 
+such as the distributions of median household income by the racial and ethnic 
+composition of neighborhoods. This is the motivating example for the chart below, 
+which looks at household income by race/ethnicity in New York City. 
+The data wrangling in the first part of the code chunk takes advantage of some of 
+the skills covered in Chapters 2 and 3, allowing for visualization of household 
+income distributions by the largest group in each Census tract.
+
+```{r}
+library(ggbeeswarm)
+
+nyc_race_income <- get_acs(
+  geography = "tract",
+  state = "NY",
+  county = c("New York", "Bronx", "Queens", "Richmond", "Kings"),
+  variables = c(White = "B03002_003",
+                Black = "B03002_004",
+                Asian = "B03002_006",
+                Hispanic = "B03002_012"),
+  summary_var = "B19013_001",
+  year = 2022
+) %>% 
+  group_by(GEOID) %>% 
+  filter(estimate == max(estimate, na.rm = T)) %>% 
+  ungroup() %>% 
+  filter(estimate != 0)
+
+ggplot(nyc_race_income, aes(x = variable, y = summary_est, color = summary_est)) + 
+  geom_quasirandom(alpha = 0.5) +
+  coord_flip() +
+  theme_minimal(base_size = 13) +
+  scale_color_viridis_c(guide = "none") +
+  scale_y_continuous(labels = label_dollar()) +
+  labs(x = "Largest group in Census tract",
+       y = "Median household income",
+       title = "Household income distribution by largest racial/ethnic group",
+       subtitle = "Census tracts, New York City",
+       caption = "Data source: 2018-2022 ACS")
+```
+
+The plot shows that the wealthiest neighborhoods in New York City - 
+those with median household incomes exceeding $150,000 - are nearly all 
+plurality or majority non-Hispanic white. However, the chart also illustrates 
+that there are a range of values among neighborhoods with pluralities of the 
+different racial and ethnic groups, suggesting a nuanced portrait of the 
+intersections between race and income inequality in the city.
+
+## 4.7.3 Geofaced plots
+
+The next four chapters of the book, Chapters 5 through 8, 
+are all about spatial data, mapping, and spatial analysis. 
+Geographic location can be incorporated into Census data visualizations without
+using geographic information explicitly by way of the **geofacet** package. 
+Geofaceted plots are enhanced versions of faceted visualizations that arrange
+subplots in relationship to their relative geographic location.
+The geofacet package has [over 100 available grids to choose from](https://hafen.github.io/geofacet/articles/geofacet.html#list-available-grids) allowing for
+faceted plots for US states, counties, and regions around the world.
+The key is to use a column that can map correctly to information in the
+geofaceted grid that you are using.
+
+In the example below, we replicate the population pyramid code above to generate
+population pyramids for each state in the US. However, we also modify the output
+data so that the population information reflects the proportion of the overall
+population for each state so that all states are on consistent scales.
+The population pyramid code is similar, though the axis information is
+unnecessary as it will be stripped from the final plot.
+
+```{r}
+library(geofacet)
+
+us_pyramid_data <- get_estimates(
+  geography = "state",
+  product = "characteristics",
+  breakdown = c("SEX", "AGEGROUP"),
+  breakdown_labels = T,
+  year = 2022
+) %>% 
+  filter(str_detect(AGEGROUP, "^Age"),
+         SEX != "Both sexes") %>% 
+  group_by(NAME) %>% 
+  mutate(prop = value / sum(value, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(prop = ifelse(SEX == "Male", -prop, prop))
+
+ggplot(us_pyramid_data, aes(x = prop, y = AGEGROUP, fill = SEX)) +
+  geom_col(width = 1) +
+  theme_minimal() +
+  scale_fill_manual(values = c("darkred", "navy")) +
+  facet_geo(~NAME, grid = "us_state_with_DC_PR_grid2",
+            label = "code") +
+  theme(axis.text = element_blank(),
+        strip.text.x = element_text(size = 8)) +
+  labs(x = "",
+       y = "",
+       title = "Population structure by age and sex",
+       fill = "",
+       caption = "Data source: US Census Bureau population estimates & tidycensus R package")
+
+```
+
+The result is a compelling visualization that expresses general geographic 
+relationships and patterns in the data while showing comparative population 
+pyramids for all states. The unique nature of Washington, DC stands out with its
+large population in their 20s and 30s; we can also compare Utah, the youngest
+state in the country, with older states in the Northeast.
+
+If this specific grid arrangement is not to your liking 
+(e.g. Minnesotans may take issue with Wisconsin to the north!), try out some of
+the other built-in grid options in the package. Also, you can use the
+`grid_design()` function in the geofacet package to pull up an interactive app
+in which you can design your own grid for use in geofaceted plots!
+
+## 4.7.4 Interactive visualization with plotly
+
+The **htmlwidgets** package provides a bridge between JavaScript libraries for 
+interactive web-based data visualization and the R language. 
+Since 2015, the R community has released hundreds of packages that depend on
+htmlwidgets and bring interactive data visualization to R. 
+One of the most popular packages for interactive visualization is the **plotly** package,
+an interface to the plotly visualization library.
+
+**plotly** is a well-developed library that allows for many different types of
+custom visualizations. However, one of the most useful functions in the **plotly**
+package is arguably the simplest. The `ggplotly()` function can convert an
+existing **ggplot2** graphic into an interactive web visualization in a single line
+of code! Let’s try it out here with the `utah_pyramid` population pyramid:
+
+```{r}
+library(plotly)
+
+utah <- get_estimates(
+  geography = "state",
+  state = "UT",
+  product = "characteristics",
+  breakdown = c("SEX", "AGEGROUP"),
+  breakdown_labels = T,
+  year = 2019
+)
+
+utah_filtered <- filter(utah, str_detect(AGEGROUP, "^Age"),
+                        SEX != "Both sexes") %>% 
+  mutate(value = ifelse(SEX == "Male", -value, value))
+
+utah_pyramid <- ggplot(
+  utah_filtered,
+  aes(
+    x = value,
+    y = AGEGROUP,
+    fill = SEX
+  )
+) +
+  geom_col(width = 0.95, alpha = 0.75) +
+  theme_minimal(base_family = "Verdana",
+                base_size = 12) +
+  scale_x_continuous(
+    labels = ~number_format(scale = .001, suffix = "k")(abs(.x)),
+    limits = 140000 * c(-1,1)
+  ) +
+  scale_y_discrete(labels = ~str_remove_all(.x, "Age\\s|\\syears")) +
+  scale_fill_manual(values = c("darkred", "navy")) +
+  labs(
+    x = "",
+    y = "2019 Census Bureau population estimate",
+    title = "Population structure in Utah",
+    fill = "",
+    caption = "Data source: US Census Bureau population estimates & tidycensus R package"
+    )
+
+ggplotly(utah_pyramid)
+```
+
+Try hovering your cursor over the different bars; this reveals a tooltip that 
+shares information about the data. The legend is interactive, as data series can
+be clicked on and off; viewers can also pan and zoom on the plot using the toolbar
+that appears in the upper right corner of the visualization. Interactive graphics
+like this are an excellent way to facilitate additional data exploration, and
+can be polished further for presentation on the web.
+
+# [4.8 Learning more about visualization](https://walker-data.com/census-r/exploring-us-census-data-with-visualization.html#learning-more-about-visualization)
+
+This chapter has introduced a series of visualization techniques implemented in
+ggplot2 that are appropriate for US Census Bureau data. Readers may want to learn
+more about effective principles for visualization design and communication and
+apply that to the techniques covered here. While Chapter [6](https://walker-data.com/census-r/mapping-census-data-with-r.html#mapping-census-data-with-r) covers some of these
+principles in brief, literature that focuses specifically on these topics will
+be more comprehensive. Munzner ([2014](https://walker-data.com/census-r/references.html#ref-munzner2014)) is an in-depth overview of visualization
+techniques and design principles, and offers a [corresponding website with lecture slides](https://www.cs.ubc.ca/~tmm/vadbook/). Evergreen ([2020](https://walker-data.com/census-r/references.html#ref-evergreen2020)) and Knaflic ([2015](https://walker-data.com/census-r/references.html#ref-knaflic2015)) provide guidelines for effective
+communication with visualization and both offer excellent design tips for
+business and general audiences. R users may be interested in Wilke ([2019](https://walker-data.com/census-r/references.html#ref-wilke2019)) and
+Healy ([2019](https://walker-data.com/census-r/references.html#ref-healy2019)), which both offer a comprehensive overview of data visualization best
+practices along with corresponding R code to reproduce the figures in their books.
