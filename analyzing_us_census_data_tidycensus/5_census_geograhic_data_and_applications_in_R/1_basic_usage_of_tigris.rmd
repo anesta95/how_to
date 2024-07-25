@@ -1,0 +1,155 @@
+# [5.1 Basic usage of tigris](https://walker-data.com/census-r/census-geographic-data-and-applications-in-r.html#basic-usage-of-tigris)
+
+As discussed in previous chapters of this book, Census and ACS data are associated with geographies, which are units at which the data are aggregated. These defined geographies are represented in the US Census Bureau’s TIGER/Line database, where the acronym TIGER stands for Topologically Integrated Geographic Encoding and Referencing. This database includes a high-quality series of geographic datasets suitable for both spatial analysis and cartographic visualization . Spatial datasets are made available as shapefiles, a common format for encoding geographic data.
+
+The TIGER/Line shapefiles include three general types of data:
+
+* _Legal entities_, which are geographies that have official legal standing in the United States. These include states and counties.
+* _Statisticsal entities_, which are geographies defined by the Census Bureau for purposes of data collection and dissemination. Examples of statistical entities include Census tracts and block groups.
+* _Geographic features_, which are geographic datasets that are not linked with aggregate demographic data from the Census Bureau. These datasets include roads and water features.
+
+Traditionally, TIGER/Line shapefiles are downloaded from a web interface as zipped folders, then unzipped for use in a Geographic Information System (GIS) or other software that can work with geographic data. However, the R package **tigris** allows R users to access these datasets directly from their R sessions without having to go through these steps.
+
+This chapter will cover the core functionality of the __tigris__ package for working with Census geographic data in R. In doing so, it will highlight the **sf** package for representing spatial data as R objects.
+
+The **tigris** R package simplifies the process for R users of obtaining and using Census geographic datasets. Functions in **tigris** _download_ a requested Census geographic dataset from the US Census Bureau website, then _load_ the dataset into R as a spatial object. Generally speaking, each type of geographic dataset available in the Census Bureau’s TIGER/Line database is available with a corresponding function in **tigris**. For example, the `states()` function can be run without arguments to download a boundary file of US states and state equivalents.
+
+```{r}
+library(tigris)
+
+st <- states()
+```
+
+Let's take a look at what we got back:
+
+```{r}
+class(st)
+```
+
+The returned object is of both class `"sf"` and `"data.frame"`. We can print out the first 10 rows to inspect the object further:
+
+```{r}
+st
+```
+
+The object `st`, representing all US states and territories, includes a data frame with a series of columns representing characteristics of those states, like a name, postal code, and Census ID (the `GEOID` column). It also contains a special list-column, `geometry`, which is made up of a sequence of coordinate of longitude/latitude coordinate pairs that collectively represent the boundary of each state.
+
+The `geometry` column can be visualized in R with the `plot()` function:
+
+```{r}
+plot(st$geometry)
+```
+
+Other Census datasets may be available by state or by county within the state. In some cases, this subsetting is optional; in other cases, `state` and/or `county` arguments will be required. For example, the `counties()` function can be used to obtain county boundaries for the entirety of the United States, but also can be used with the `state` argument to return only those counties from a specific state, like New Mexico.
+
+
+```{r}
+nm_counties <- counties("NM")
+
+plot(nm_counties$geometry)
+```
+
+In this case the state postal code "NM" is used to instruct **tigris** to subset the counties dataset for counties in New Mexico. The full name of the state, `"New Mexico"`, would work the same here as well. Obtaining Census shapefiles programmatically requires inputting the Federal Information Processing Standard (FIPS) code; however, **tigris** translates postal codes and names of states and counties to their FIPS codes so that R users do not have to look them up.
+
+States and counties are examples of _legal entities_ that can be accessed with **tigris**. _Statistical entities_ and _geographic features_ are similarly accessible if they exist in the TIGER/Line database. For example, a user might request Census tract boundaries for a given county in New Mexico with the corresponding `tracts()` function.
+
+```{r}
+la_tracts <- tracts("NM", "Los Alamos")
+
+plot(la_tracts$geometry)
+```
+
+Several geographic features are available in **tigris** as well, including roads and water features which can be useful for thematic mapping. For example, a user could request area water data for Los Alamos County with the `area_water()` function.
+
+```{r}
+la_water <- area_water("NM", "Los Alamos")
+
+plot(la_water$geometry)
+```
+
+## 5.1.1 Understanding tigris and simple features
+
+Data returned by the **tigris** package are examples of _vector spatial data_, a spatial data model that represents geographic features as points, lines, and polygons. The vector spatial data model is represented in R with the [sf package](https://r-spatial.github.io/sf/), an implementation of simple features in the R language. The **sf** package is an R interface to C libraries that power much of the broader geographic data ecosystem: [GDAL](https://gdal.org/) for reading & writing spatial data, [GEOS](https://trac.osgeo.org/geos/) for modeling spatial relationships, and [PROJ](https://proj.org/) for representing coordinate reference systems. These topics will be outlined in more detail in this chapter and the remainder of this section.
+
+When a simple features object is printed, the information above the data frame gives some additional geographic context to the coordinates in the geometry column. This includes a _geometry type_, a _bounding box_, and a _coordinate reference system (CRS)_ definition. These spatial concepts help define how R represents the data geographically, and will be explored further later in this chapter.
+
+Vector data are typically represented as either _points, lines, or polygons_, and **tigris** gives access to all three types.
+
+### 5.1.1.1 Points
+
+An example point dataset available in the **tigris** package is Census landmarks, which is a point-of-interest dataset that is not comprehensive but is used by the Census Bureau to guide field enumerators. Let’s acquire landmark point data for the District of Columbia and take a look.
+
+```{r}
+dc_landmarks <- landmarks("DC", type = "point")
+
+plot(dc_landmarks$geometry)
+```
+
+**Points** are vector data represented by a single coordinate pair; while they have a location, they do not have length or area and in turn are zero-dimensional. Points are useful for representing geographic phenomena when the physical properties of the features are not of importance to a visualization or analysis. For example, if we are interested in the geographic distribution of Census landmarks in Washington DC, but not in the actual shape or physical area of those specific landmarks, representing landmarks as points makes sense. sf represents points with the geometry type `POINT`.
+
+#### 5.1.1.2 Lines
+
+```{r}
+dc_roads <- primary_secondary_roads("DC")
+
+plot(dc_roads$geometry)
+```
+**Lines** are one-dimensional representations of geographic features that are used when the length, but not the area, of those features is of primary importance. With respect to the TIGER/Line shapefiles, transportation network features such as roads and railroads are represented as lines. Line features will have at least two linked coordinate pairs, and complex linear representations will have many more. Lines are represented with the geometry type `LINESTRING.`
+
+#### 5.1.1.3 Polygons
+
+```{r}
+dc_block_groups <- block_groups("DC")
+
+plot(dc_block_groups$geometry)
+```
+
+*(Polygons)* are enclosed shapes with at least three connected coordinate pairs. With respect to Census geometries, enumeration units like block groups are represented as polygons in the TIGER/Line files. Polygon geometry is useful when an analyst needs to represent the shape or area of geographic features in their project.
+
+These three core geometries (point, line, and polygon) can be encoded in more complex ways in the simple features representation used by sf. For example, the geometry type `POLYGON` will use one row in a simple features data frame for each discrete shape; the geometry type `MULTIPOLYGON`, in contrast, can link multiple discrete shapes as part of the same geographic feature. This is important for encoding features that may have detached parts, such as a series of islands that belong to the same county. In this vein, points can be represented as MULTIPOINT and lines can be represented as `MULTILINESTRING`, respectively, to accommodate similar scenarios.
+
+### 5.1.2 Data availability in tigirs
+
+A full enumeration of available **tigris** datasets and the functions to access them are found in the guide below.
+
+**Function**|**Datasets available**|**Years available**
+:-----:|:-----:|:-----:
+nation()|cartographic (1:5m; 1:20m)|2013-
+divisions()|cartographic (1:500k; 1:5m; 1:20m)|2013-
+regions()|cartographic (1:500k; 1:5m; 1:20m)|2013-
+states()|TIGER/Line; cartographic (1:500k; 1:5m; 1:20m)|1990, 2000, 2010-
+counties()|TIGER/Line; cartographic (1:500k; 1:5m; 1:20m)|1990, 2000, 2010-
+tracts()|TIGER/Line; cartographic (1:500k)|1990, 2000, 2010-
+block\_groups()|TIGER/Line; cartographic (1:500k)|1990, 2000, 2010-
+blocks()|TIGER/Line|2000, 2010-
+places()|TIGER/Line; cartographic (1:500k)|2011-
+pumas()|TIGER/Line; cartographic (1:500k)|2012-
+school\_districts()|TIGER/Line; cartographic|2011-
+zctas()|TIGER/Line; cartographic (1:500k)|2000, 2010, 2012-
+congressional\_districts()|TIGER/Line; cartographic (1:500k; 1:5m; 1:20m)|2011-
+state\_legislative\_districts()|TIGER/Line; cartographic (1:500k)|2011-
+voting\_districts()|TIGER/Line|2012, 2020-
+area\_water()|TIGER/Line|2011-
+linear\_water()|TIGER/Line|2011-
+coastline()|TIGER/Line()|2013-
+core\_based\_statistical\_areas()|TIGER/Line; cartographic (1:500k; 1:5m; 1:20m)|2011-
+combined\_statistical\_areas()|TIGER/Line; cartographic (1:500k; 1:5m; 1:20m)|2011-
+metro\_divisions()|TIGER/Line|2011-
+new\_england()|TIGER/Line; cartographic (1:500k)|2011-
+county\_subdivisions()|TIGER/Line; cartographic (1:500k)|2010-
+urban\_areas()|TIGER/Line; cartographic (1:500k)|2012-
+primary\_roads()|TIGER/Line|2011-
+primary\_secondary\_roads()|TIGER/Line|2011-
+roads()|TIGER/Line|2011-
+rails()|TIGER/Line|2011-
+native\_areas()|TIGER/Line; cartographic (1:500k)|2011-
+alaska\_native\_regional\_corporations()|TIGER/Line; cartographic (1:500k)|2011-
+tribal\_block\_groups()|TIGER/Line|2011-
+tribal\_census\_tracts()|TIGER/Line|2011-
+tribal\_subdivisions\_national()|TIGER/Line|2011-
+landmarks()|TIGER/Line|2011-
+military()|TIGER/Line|2011-
+
+Note from the guide that many datasets are available as both TIGER/Line and cartographic boundary versions, and can be downloaded for multiple years.
+
+
