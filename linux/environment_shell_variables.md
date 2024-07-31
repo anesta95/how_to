@@ -1,116 +1,156 @@
-# What are environment variables?
+# What is an environment in linux
 
-Standard UNIX variables are split into two categories, environment variables and shell variables. In broad terms, shell variables apply only to the current instance of the shell and are used to set short-term working conditions; environment variables have a farther reaching significance, and those set at login are valid for the duration of the session. By convention, environment variables have UPPER CASE and shell variables have lower case names.
+An **environment** in linux is one way that the shell keeps track of all the settings and details the shell compiles to determine its behavior and access to resources.
 
-Environment variables are a set of dynamic named values stored within the system that is used by applications. Each variable contains a name and an associated value. Usually, the name is in UPPER CASE, and the values are case-sensitive. Environment variables can contain information about your login session. They're stored for the system shell to use when executing commands.
+The environment provides a medium through which the shell process can get or set settings and, in turn, pass these on to its child processes.
 
+# How environments and environment variables work in linux
 
-To _temporarily_ set and unset an environment variable you would use the terminal commands ```export TEMP_ENV_VAR=/this/specific/filepath```. Issue the command ```echo $TEMP_ENV_VAR``` to check the value of your enviroment variable. This new variable is available system-wide and is inherited by all spawned child processes and shells.
+The environment is implemented as strings that represent key-value pairs. If multiple values are passed, they are typically separated by colon (`:`) characters.
 
-To unset that environment variable, just use ```unset TEMP_ENV_VAR``` in the terminal. You can also list out all of your currently set environment variables with the command `set`
-
-# Understanding environment variables
-You don’t often use environment variables directly. They’re referenced by individual applications and daemons as needed. For instance, your home directory is set as an environment variable when you log in. For example, on Linux you can see your `HOME` environment variable's contents like this:
+The keys in these scenarios are variables that have the following format:
 
 ```
-echo $HOME
+KEY=value
+KEY="value with spaces"
+KEY=value1:value2:value3
 ```
 
-You can view all environment variables set on your system with the `env` command. The list is long, so pipe the output through `more` or `less` to make it easier to read:
+* The names of variables are case-sensitive. By convention, _environment_ variables should have UPPER CASE names. This helps users distinguish environmental variables within other contexts.
+* When assigning multiple values to the variable they must be separated by the `:` character.
+* There is no space around the equals `=` symbol.
+* If the value contains significant white-space, quotations are used `""`
 
-```env | less```
+# Environment variables vs. shell variables
 
-## The PATH
-When you type a command, the only reason your computer knows how to find the application corresponding to that command is that the `PATH` environment variable tells it where to look. This variable lists valid directories for your operating system to search for commands, whether that command is ls or cp, or a graphical application like Firefox or Lutris, or anything else.
+Variables can be classified into two main categories, environment variables, and shell variables.
 
-Different variables have different uses and significance for different programs. For example the `USER` variable is used by several systems as a way to identify who is requesting a service.
+* **Environment variables** are variables that are defined for the current shell, available system-wide, and are inherited by all spawned child processes and shells. Environmental variables are used to pass information into processes that are spawned from the shell.
+* **Shell variables** are variables that apply only to the current shell instance. They are contained exclusively within the shell in which they were set or defined. Each shell such as `zsh` and `bash`, has its own set of internal shell variables and are often used to keep track of ephemeral data, like the current working directory.
 
-# Setting an environment variable
+# Printing and listing shell and environment variables
 
-Usually, the installer program, whether it’s `dnf` on Fedora, `apt` on Ubuntu, `brew` on Mac, or a custom installer, updates your environment variables for a new application. Sometimes, though, when you’re installing something outside of your distribution’s intended toolset, you may have to manage an environment variable yourself. Or you might choose to add an environment variable to suit your preferences. If you decide you want to keep some applications or scripts in a `bin` folder located in your home directory, then you must add that directory to your PATH so your operating system knows to look there for applications to run when you issue a command.
+Each shell session keeps track of its own shell and environmental variables. We can access these in a few different ways in linux.
 
-## Temporary environment variables
+* `env` – The command allows you to run another program in a custom environment without modifying the current one. When used without an argument it will print a list of the current environment variables.
+  * `env` lets you modify the environment that programs run in by passing a set of variable definitions into a command like this:
+  * `env VAR1="value" command_to_run command_options`
+  * Since child processes typically inherit the environmental variables of the parent process, this gives you the opportunity to override values or add additional variables for the child.
+* `printenv` – The command prints all or the specified environment variables.
+* `set` – The command sets or unsets shell variables. When used without an argument it will print a list of all variables including environment and shell variables, and shell functions.
+* `unset` – The command deletes shell and environment variables.
+* `export` – The command sets environment variables.
 
-You can add a location to your `PATH` the way you create throw-away variables. It works, but only as long as the shell you used to modify your system `PATH` remains open. For instance, open a Bash shell and modify your system `PATH`:
+# Setting shell and environment variables
 
-```export PATH=$PATH:/home/username/bin```
+## Creating shell variables
 
-Confirm the result:
-
-```echo $PATH```
-
-Close the session:
-
-`exit`
-
-Open a new terminal and take a look at the `PATH` variable:
-
-`echo $PATH`
-
-This variable has reverted to its default state because `PATH` isn’t getting set with each new shell. For that, you must configure your variables to load any time a shell is launched.
-
-## Permanent environment variables
-You can set your own persistent environment variables in your shell configuration file, the most common of which is `~/.bashrc`. If you’re a system administrator managing several users, you can also set environment variables in a script placed in the `/etc/profile.d` directory.
-
-The syntax for setting a variable by configuration file is the same as setting a variable in your shell:
-
-
-`export PATH=$PATH:/snap/bin:/home/username/bin`
-
-Close the current shell, or else for it to load the updated config:
-
-`. ~/.bashrc`
-
-Take another look at your system path:
-
-`echo $PATH`
-
-It is now set correctly to include your additional custom directory.
-
-# Discovering other environment variables
-How do you find out which environment variables are meaningful?
-
-The answer lies in an application’s documentation. For instance, to find out what options are available to you for your general Bash environment, you can read the Bash documentation. While the Bash man page mentions many important variables, the GNU info page for Bash features two exhaustive lists of useful Bourne Shell and Bash environment variables, and how each is used.
-
-For example, in the info page list:
+To create a _shell_ variable, you only need to specify a name and value:
 
 ```
-'HISTCONTROL'
-     A colon-separated list of values controlling how commands are saved
-     on the history list.  If the list of values includes 'ignorespace',
-     lines which begin with a space character are not saved in the
-     history list.  A value of 'ignoredups' causes lines which match the
-     previous history entry to not be saved.  A value of 'ignoreboth' is
-     shorthand for 'ignorespace' and 'ignoredups'.
-     [...]
+TEST_VAR='Hello world!'
 ```
 
-This output tells you that the `HISTCONTROL` environment variable controls how your Bash history is presented, and what values you can use to customize that experience. In this example, the `ignoredups` value tells the output of the `history` command to ignore duplicate lines.
-
-Test by issuing the same command twice in a row:
+You can verify that the variable is set in one of two ways, using `echo` or filtering the output of `set` with `grep`:
 
 ```
-echo "hello world"
-echo "hello world"
+echo $TEST_VAR
+set | grep TEST_VAR
 ```
 
-View your most recent bash command history:
-`history | tail -5`
+We can verify that this is not an environmental variable by trying the same thing with `printenv`. Both commands below should give you nothing in return.
 
-Because the value of your `$HISTCONTROL` environment variable (which you can check with `echo $HISTCONTROL`) is `ignoreboth`, duplicate shell commands are not saved.
+```
+printenv | grep TEST_VAR
+printenv TEST_VAR
+```
 
-However if it wasn't you could set a new environment variable in your `.bashrc` file based on the information exerpted from the `info bash` page above.
+Additionally, since `TEST_VAR` is a shell variable, it won't be passed onto any child processes. This can be verified by trying to print the variable in a new shell and getting an empty output in one of the two ways below.
 
-```export HISTCONTROL=$HISTCONTROL:ignorespace:ignoredups```
+```
+bash -c 'echo $TEST_VAR'
+```
+or
+```
+bash
+echo $TEST_VAR
+exit
+```
 
-Save then load your new configuration:
+## Creating environment variables
 
-```source ~/.bashrc```
+You can turn a current shell variable into an environment variable by _exporting_ it.
+
+```
+export TEST_VAR
+```
+
+You can also set _new_ environment variables with the `export` command as well.
+
+```
+export MY_NEW_VAR="My New Var"
+```
+
+However, environment Variables created in this way are available only in the current session. If you open a new shell or if you log out all variables will be lost.
+
+This is because environmental variables are only passed to child processes. There isn’t a built-in way of setting environmental variables of the parent shell. This is good in most cases and prevents programs from affecting the operating environment from which they were called.
+
+# Demoting and Unsetting Variables
+
+You can change an environment variable back to a shell varible with `export` as well.
+
+```
+export -n TEST_VAR
+```
+
+To completely remove a variable, either shell or environment use the `unset` command.
+
+```
+unset TEST_VAR
+```
+
+# Implementing persistent environment variables
+
+To make environment variables persistent you need to define those variables in the bash configuration files.
+
+Most environment variables you want to set are user-specific environment variables to be available in both login and non-login shells. 
+
+To set these environment variables they need to be defined in the `~/.bashrc` file. Open the `~/.bashrc` file in a text editor like `vim` or `nano` and add a line with the same command you would use in the terminal.
+
+```
+export VARNAME=value
+```
+
+Then force your current session to read the `~/.bashrc` file name with the command:
+
+```
+source ~/.bashrc
+```
+
+In new shell sessions the `VARNAME` environment variable will now be available.
+
+For system-wide environment variables they are set in the `/etc/environment` file in this format:
+
+```
+FOO=bar
+VAR_TEST="Test Var"
+```
+
+For environment variables loaded whenever a bash login shell is entered you need to edit the `/etc/profile` file with the same `export` command:
+
+```
+export JAVA_HOME="/path/to/java/home"
+export PATH=$PATH:$JAVA_HOME/bin
+```
+# Collison protection variables
+
+# Passing variables to child process
+
+## Prepending variables
+
+## Exporting variables
 
 # Resources
-* [Linux 101: What are environment variables?](https://www.techrepublic.com/article/linux-101-what-are-environment-variables/)
-* [What are environment variables in Bash?](https://opensource.com/article/19/8/what-are-environment-variables)
 * [How to Read and Set Environment and Shell Variables on Linux](https://www.digitalocean.com/community/tutorials/how-to-read-and-set-environmental-and-shell-variables-on-linux)
 * [How to Set and List Environment Variables in Linux](https://linuxize.com/post/how-to-set-and-list-environment-variables-in-linux/)
-* [How to Set an Environment Variable in Linux](https://www.freecodecamp.org/news/how-to-set-an-environment-variable-in-linux/)
 * [Using variables in Bash](https://opensource.com/article/19/8/using-variables-bash)
