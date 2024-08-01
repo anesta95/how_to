@@ -1,54 +1,84 @@
-# The PATH
-When you type a command, the only reason your computer knows how to find the application corresponding to that command is that the `PATH` environment variable tells it where to look. This variable lists valid directories for your operating system to search for commands, whether that command is ls or cp, or a graphical application like Firefox or Lutris, or anything else.
+# What is the PATH in linux?
 
-Different variables have different uses and significance for different programs. For example the `USER` variable is used by several systems as a way to identify who is requesting a service.
+The `PATH` is an *environment variable* that is a colon-delimited list of directories that tells the shell which directories to search for *executable files* a.k.a. *executables*.
 
-# Setting an environment variable
+When you type a command on the command line, you're telling the shell to run an executable file with the given name of the command you supply. In Linux, these executable programs — such as `ls`, `cd`, `find`, etc. — usually live inside several different directories on your system.
 
-Usually, the installer program, whether it’s `dnf` on Fedora, `apt` on Ubuntu, `brew` on Mac, or a custom installer, updates your environment variables for a new application. Sometimes, though, when you’re installing something outside of your distribution’s intended toolset, you may have to manage an environment variable yourself. Or you might choose to add an environment variable to suit your preferences. If you decide you want to keep some applications or scripts in a `bin` folder located in your home directory, then you must add that directory to your PATH so your operating system knows to look there for applications to run when you issue a command.
+All files *with executable permissions* stored in these directories in the `PATH` can be run from any location. The most common directories that hold executable programs are `/bin`, `/sbin`, `/usr/sbin`, `/usr/local/bin` and `/usr/local/sbin`.
 
-## Temporary environment variables
+This means that a directory with scripts that you write or ones that you download which is then added to the `PATH` will enable you to run those programs from anywhere on your system by just envoking their name on the command line.
 
-You can add a location to your `PATH` the way you create throw-away variables. It works, but only as long as the shell you used to modify your system `PATH` remains open. For instance, open a Bash shell and modify your system `PATH`:
+For example, instead of typing the following to run a Python program:
 
-```export PATH=$PATH:/home/username/bin```
+```
+/usr/bin/python3
+```
 
-Confirm the result:
+Because the `/usr/bin` directory is included in the `PATH` variable, you can type this instead:
 
-```echo $PATH```
+```
+python3
+```
 
-Close the session:
+# Viewing the PATH variable
 
-`exit`
+You can view the `PATH` variable with either of the following commands:
 
-Open a new terminal and take a look at the `PATH` variable:
+```
+echo $PATH
+printenv PATH
+```
+When a command-line program is not installed in any of the mentioned directories, you may need to add the directory of that program to `PATH`.
 
-`echo $PATH`
+# Adding a directory to the PATH environment variable
 
-This variable has reverted to its default state because `PATH` isn’t getting set with each new shell. For that, you must configure your variables to load any time a shell is launched.
+You can add a directory — typically the *absolute* file path to the folder with the executable files — to either the start or end of the `PATH`. Multiple directories can be added to `PATH` at once by adding a colon `:` between the directories.
 
-## Permanent environment variables
-You can set your own persistent environment variables in your shell configuration file, the most common of which is `~/.bashrc`. If you’re a system administrator managing several users, you can also set environment variables in a script placed in the `/etc/profile.d` directory.
+The start:
+```
+export PATH=/the/directory/file/path:$PATH
+```
 
-The syntax for setting a variable by configuration file is the same as setting a variable in your shell:
+The end:
+```
+export PATH=$PATH:/the/directory/file/path
+```
 
+Directories at the start of the `PATH` are checked first by the shell, followed by all the other directories listed.
 
-`export PATH=$PATH:/snap/bin:/home/username/bin`
+This method will *only* work for the *current shell session*. Once you exit the current session and start a new one, the `PATH` variable will reset to its default value and no longer contain the directory you added. 
 
-Close the current shell, or else for it to load the updated config:
+# Permanently adding a directory to the PATH variable
 
-`. ~/.bashrc`
+For the `PATH` environment variable to persist across different shell sessions, it has to be stored in the *shell configuration file(s)*. In most Linux distributions, when you start a new session, environment variables are read from the following files:
 
-Take another look at your system path:
+* *Global* shell-specific configuration files such as `/etc/environment` and `/etc/profile`. Use this file if you want the new directory added to *all* system users' `$PATH`.
+* *Per-user* shell-specific configuration files. If you are using bash, you can set the `$PATH` variable in the `~/.bashrc` file.
 
-`echo $PATH`
+Open the `~/.bashrc` file with a text editor — such as `vim` — and add a line that is the same as the arguements you'd supply to the command line to add a directory to the path:
 
-It is now set correctly to include your additional custom directory.
+```
+vim ~/.bashrc
+export PATH=$PATH:/the/directory/file/path
+```
+
+Save and close the `~/.bashrc` file. The changes to the `PATH` variable will be made once a new shell session is started. To apply the changes to the current session, use the `source` command:
+
+```
+source ~/.bashrc
+```
+
+# Removing a directory from the PATH
+To remove a directory from the `PATH` variable, you need to open the corresponding configuration file and delete the directory in question from the `PATH` variable. The change will be active in the new shell sessions.
+
+Another rare situation is if you want to remove a directory from the `PATH` _only for the current session_. You can do that by temporarily editing the variable. For example, if you want to remove the `/home/lina/bin` directory from the `PATH` variable, you would do the following:
+
+```
+PATH=$(echo "$PATH" | sed -e 's/:\/home\/lina\/bin$//')
+```
+
+In the command above, we’re passing the current `PATH` variable to the `sed` command, which will remove the specified string which is the directory path you want temporarily removed for the current session.
 
 # Sources
-* [What are environment variables in Bash?](https://opensource.com/article/19/8/what-are-environment-variables)
 * [How To View and Update the Linux PATH Environment Variable](https://www.digitalocean.com/community/tutorials/how-to-view-and-update-the-linux-path-environment-variable)
 * [How to Add a Directory to PATH in Linux](https://linuxize.com/post/how-to-add-directory-to-path-in-linux/)
-* [Understanding the PATH Variable in Linux](https://medium.com/towards-data-engineering/understanding-the-path-variable-in-linux-2e4bcbe47bf5)
-
-

@@ -91,7 +91,7 @@ You can also set _new_ environment variables with the `export` command as well.
 export MY_NEW_VAR="My New Var"
 ```
 
-However, environment Variables created in this way are available only in the current session. If you open a new shell or if you log out all variables will be lost.
+However, environment variables created in this way are available only in the current session. If you open a new shell or if you log out all variables will be lost.
 
 This is because environmental variables are only passed to child processes. There isn’t a built-in way of setting environmental variables of the parent shell. This is good in most cases and prevents programs from affecting the operating environment from which they were called.
 
@@ -143,12 +143,55 @@ export JAVA_HOME="/path/to/java/home"
 export PATH=$PATH:$JAVA_HOME/bin
 ```
 # Collison protection variables
+If you would rather not override a variable that might already exist when creating a new variable, there's a special syntax to set a variable to its existing value unless its existing value is empty.
+
+Assume that `FOO` is _already_ set to `/home/username/Documents`
+
+```
+FOO=${FOO:- "bar"}
+echo $FOO
+```
+
+The color-dash `:-` notation causes **declare** to default to an existing value. To see this process work the other way, clear the variable, and try again:
+
+```
+unset FOO
+echo $FOO
+FOO=${FOO:- "bar"}
+echo $FOO
+```
 
 # Passing variables to child process
+When you create a variable, you are creating what is called a _local variable_. This means that the variable is known to your current shell and only your current shell.
+
+This setup is an intentional limitation of a variable’s _scope_. Variables, by design, tend to default to being locally available only, in an attempt to keep information sharing on a need-to-know basis.
+
+If you want to pass a variable to a child process, you can **prepend** a command with variable definitions, or you can **export** the variable to the child process.
 
 ## Prepending variables
+You can prepend any number of variables before running a command. Whether the variables are used by the child process is up to the process, but you can pass the variables to it no matter what:
+
+```
+FOO=123 bash
+echo $FOO
+```
 
 ## Exporting variables
+The **export** command — a keyword built into bash — broadens the *scope* of whatever variable(s) you specify:
+
+```
+PS1="% "
+FOO=123
+export PS1
+export FOO
+bash
+echo $PS1
+echo $FOO
+```
+
+It's not just a child shell that has access to a local variable that's been passed to it or exported, it's any *child process* of that shell. You can launch an application from the same shell, and that variable is available as an environment variable from *within* the application.
+
+In this way, variables exported for *everything* on your system to use are called **environment variables**
 
 # Resources
 * [How to Read and Set Environment and Shell Variables on Linux](https://www.digitalocean.com/community/tutorials/how-to-read-and-set-environmental-and-shell-variables-on-linux)
