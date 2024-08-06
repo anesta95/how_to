@@ -1,0 +1,72 @@
+# [5.2 Plotting geographci data](https://walker-data.com/census-r/census-geographic-data-and-applications-in-r.html#plotting-geographic-data)
+
+In the previous section, we have used the `plot()` function to visualize the 
+geometry column of a simple features object obtained with **tigris**. 
+R includes a variety of other options for quick visualization of geographic data 
+that will be useful to geospatial analysts.
+
+## 5.2.1 ggplot2 and `geom_sf()`
+As of ggplot2 version 3.0, the package released support for plotting simple 
+features objects directly with the function `geom_sf()`. `geom_sf()` streamlines
+the geographic visualization process and makes **ggplot2** a go-to package
+for visualization of simple features objects.
+
+At a basic level, a couple lines of **ggplot2** code are all that are needed to
+plto Census shapes obtained with **tigris**.
+
+```{r}
+library(ggplot2)
+
+la_tracts <- tracts("NM", "Los Alamos")
+
+ggplot(la_tracts) + geom_sf()
+```
+
+By default, ggplot2 includes its standard grey grid with latitude and longitude values displayed along the axes. For many cartographic applications, an analyst will want to remove this background information. The theme_void() function strips the background grid and axis labels from the plot accordingly:
+
+```{r}
+ggplot(la_tracts) + 
+  geom_sf() +
+  theme_void()
+```
+
+For comparative spatial plots, the [patchwork R package](https://github.com/thomasp85/patchwork) works very well for arranging a multi-plot layout. Below, we’ll use patchwork to put two ggplot2 spatial plots - one of Census tracts and one of block groups in Los Alamos County - side-by-side using the + operator.
+
+```{r}
+library(patchwork)
+
+la_block_groups <- block_groups("NM", "Los Alamos")
+
+gg_tracts <- ggplot(la_tracts) +
+  geom_sf() +
+  theme_void() +
+  labs(title = "Census tracts")
+
+gg_blocks <- ggplot(la_block_groups) +
+  geom_sf() + 
+  theme_void() +
+  labs(title = "Block groups")
+
+gg_tracts + gg_blocks
+```
+Alternatively, **patchwork** allows R users to arrange plots vertically with the `/` operator.
+
+## 5.2.2 Interactive viewing with mapview
+
+The [mapview](https://r-spatial.github.io/mapview/) R package is used for interactive mapping. 
+With a single call to its function `mapview()`, mapview visualizes geographic data 
+on an interactive, zoomable map.
+
+```{r}
+library(mapview)
+
+mapview(la_tracts)
+```
+
+Clicking on a Census tract shape reveals a pop-up with attribute information 
+found in the dataset. Additionally, users can change the underlying basemap to 
+understand the geographic context surrounding their data. **mapview** also includes 
+significant functionality for interactive mapping and data display beyond this 
+basic example; some of these features are covered in the next chapter.
+
+
