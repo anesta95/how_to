@@ -1,0 +1,122 @@
+# [5.3 tigris workflows](https://walker-data.com/census-r/census-geographic-data-and-applications-in-r.html#tigris-workflows)
+
+`tigris` is a useful package for getting TIGER/Line shapefiles into your R geospatial projects without having to navigate the Census website. Functions in **tigris** include additional options to allow for customization of output and better integration into geospatial projects. The sections below provide an overview of some of these options.
+
+## 5.3.1 TIGER/Line and cartographic boundary shapefiles.
+
+The Census Bureau also makes available _cartographic boundary shapefiles_. These files are derived from the TIGER/Line shapefiles but are generalized in the interior and clipped to the shoreline of the United States, making them a better choice in many cases than the TIGER/Line shapefiles for thematic mapping. Most polygon datasets in **tigris** are available as cartographic boundary files, accessible with the argument `cb = TRUE`.
+
+For Example:
+The TIGER/Line shapefiles include water area for geographic features, connecting the Upper Peninsula of Michigan with the southern part of the state and giving an unfamiliar representation of Michigan’s land area. Using the cartographic boundary alternative resolves this. 
+
+Let’s use **patchwork** to compare the TIGER/Line and cartographic boundary shapefiles for counties in Michigan as an illustration.
+
+```{r}
+library(tigris)
+library(ggplot2)
+library(patchwork)
+
+mi_counties <- counties("MI")
+mi_counties_cb <- counties("MI", cb = T)
+
+mi_tiger_gg <- ggplot(mi_counties) +
+  geom_sf() +
+  theme_void() +
+  labs(title = "TIGER/Line")
+
+mi_cb_gg <- ggplot(mi_counties_cb) +
+  geom_sf() +
+  theme_void() +
+  labs(title = "Cartographic boundary")
+
+mi_tiger_gg + mi_cb_gg
+```
+
+While the TIGER/Line shapefiles may represent “official” areas of counties - which include water area - they look very unfamiliar to viewers expecting a usual representation of land area in Michigan. As the cartographic boundary file shows islands and a distinct coastline, it will be the better option for most thematic mapping projects. When using the `cb = TRUE` argument with counties and larger geographies, users can also specify one of three resolutions with the `resolution` argument: `"500k"` (the default), `"5m"`, or `"20m"`, with higher values representing more generalized boundaries and smaller file sizes.
+
+## 5.3.2 Caching tigris data
+
+`tigris` offers _shapefile caching_. By specifying `options(tigris_use_cache = TRUE)`, users can instruct tigris to download shapefiles to a cache directory on their computers for future use rather than a temporary directory as **tigris** does by default. When shapefile caching is turned on, **tigris** will then look first in the cache directory to see if a requested shapefile is already there. If so, it will read it in without re-downloading. If not, it will download the file from the Census website and store it in the cache directory.
+
+
+The cache directory can be checked with the `user_cache_dir()` function available
+in the **rappdirs** package. The specific location of your cache director will
+depend on your operating system.
+
+```{r}
+options(tigris_use_cache = T)
+
+rappdirs::user_cache_dir("tigris")
+```
+
+If desired, users can modify their **tigirs** cache directory with the function
+`tigris::tigris_cache_dir()`
+
+## 5.3.3 Understanding yearly differences in TIGER/Line files
+The US Census Bureau offers a time series of TIGER/Line and cartographic boundary shapefiles from 1990 to 2020.
+While some geographies are reasonably static, such as state boundaries, others change regularly with each decennial US Census, such as Census tracts, block groups, and blocks. Given that the US Census Bureau aims to make the population sizes of Census tracts relatively consistent (around 4,000 people), it will subdivide and re-draw tracts in fast-growing areas for each Census to provide better geographic granularity.
+
+We can use some of the tidyverse tools covered earlier in this book to generate a list of tract plots for each year. `purrr::map()` iterates through each year, grabbing a cartographic boundary file of Census tracts for the four decennial Census years then plotting each of them with ggplot2. The `glue()` function in the glue package is used to create a custom title that shows the number of Census tracts in each year.
+
+
+```{r}
+library(tidyverse)
+library(patchwork)
+library(glue)
+
+yearly_plots <- map(seq(1990, 2020, 10), ~{
+  year_tracts <- tracts("TX", "Tarrant", year = .x, cb = T)
+  
+  ggplot(year_tracts) + 
+    geom_sf() +
+    theme_void() +
+    labs(title = glue("{.x}: {nrow(year_tracts)} tracts"))
+})
+```
+
+Once the plots are generated, we can use **patchwork** to facet the plots as we did earlier in this chapter. The division operator / places plots on top of one another allowing for the organization of plots in a grid.
+
+```{r}
+(yearly_plots[[1]] + yearly_plots[[2]]) / (yearly_plots[[3]] + yearly_plots[[4]])
+```
+
+Notably, these changes in Census tract geography have downstream implications as well for time-series analysis, as covered in Section 3.4.1. Data at the Census tract level in 2010, for example, will be tabulated differently than in 2020 because the tract geographies are different. One common method for adjusting demographic data between disparate zonal configurations is areal interpolation, a topic covered in Section 7.4.4.
+
+
+The default year of shapefiles in tigris is typically updated when cartographic boundary shapefiles for that year become fully available. If users need say for example the 2021 boundaries in their projects and do not want to type `year = 2021` for each dataset, the command `options(tigris_year = 2021)` can be used. This will direct **tigris** to download the 2021 shapefiles when available without having to specify the year explicitly.
+
+## 5.3.4 Combining tigris datasets
+For years 2019 and later, the US Census Bureau has started releasing national small-area cartographic boundary files, including commonly-requested geographies like block groups, Census tracts, and places. In **tigris**, a user only needs to specify `cb = TRUE` and leave the state blank to get a national dataset. One line of code in **tigris** is all you need to get 242,303 US block groups for 2020:
+
+```{r}
+us_bgs_2020 <- block_groups(cb = T, year = 2020)
+nrow(us_bgs_2020)
+```
+
+However, this is not an option for years 2018 and earlier, which means that **tigris** users must turn to alternative methods to generate national datasets. Such datasets are straightforward to create with **tidyverse** tools. As covered in several examples thus far in this book, the `purrr::map()` family of functions iterate over a sequence of values and combine function results as directed by a user. For tigris users, the `map_dfr()` function will prove especially useful as it row-binds datasets to create its output. The built-in `state.abb` vector in R gives us postal codes of all 50 US states; if Washington, DC or Puerto Rico are required in your analysis, add these to the vector with `c()` as shown below.
+
+Once the vector of state codes is prepared, a user can iterate over those codes with `map_dfr()` and produce a national block group dataset, shown for 2018 below.
+
+```{r}
+state_codes <- c(state.abb, "DC", "PR")
+
+us_bg_2018 <- list_rbind(map(
+  state_codes,
+  ~block_groups(
+    state = .x,
+    cb = T,
+    year = 2018
+  )
+))
+
+nrow(us_bg_2018)
+```
+
+If you are not using shapefile caching, this process will be slowed by the time it takes to download each block group shapefile from the Census Bureau website. However, if you have a local cache of block group shapefiles as illustrated in this section, loading and combining all 220,016 block groups for use in your analysis should only take a few seconds.
+
+
+
+
+
+
+
