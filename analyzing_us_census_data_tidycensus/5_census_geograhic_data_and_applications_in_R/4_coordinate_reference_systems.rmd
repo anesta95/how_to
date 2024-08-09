@@ -1,0 +1,87 @@
+# [5.4 Coordinate reference systems](https://walker-data.com/census-r/census-geographic-data-and-applications-in-r.html#coordinate-reference-systems)
+
+A _coordinate reference system (CRS)_ specifies not only how data coordinates should be mapped to a model of the Earth's surface but also how measurements should be computed using a given dataset. More information in an R context can be found in the book [Geocomputation with R](https://r.geocompx.org/). Below is an overview of how to work with coordinate reference systems in relationshi to the **tigris** package is covered below.
+
+Be default, datasets returned by **tigris** are stored in a _geographic coordinate system_, in which coordinates are represented as longitude and latitude relative to a three-dimensional model of the earth. The `st_crs()` function in the **sf** package helps us check the CRS of our data:
+
+```{r}
+library(sf)
+library(tigris)
+
+fl_counties <- counties("FL", cb = T)
+
+st_crs(fl_counties)
+```
+
+The function returns a [well-known text representation](https://www.ogc.org/standards/wkt-crs) of information about the coordinate reference system. All Census Bureau datasets are stored in the “NAD83” geographic coordinate system, which refers to the North American Datum of 1983. Other relevant information includes the ellipsoid used (GRS 1980, which is a generalized three-dimensional model of the Earth’s shape), the prime meridian of the CRS (Greenwich is used here), and the EPSG (European Petroleum Survey Group) ID of **4269**, which is a special code that can be used to represent the CRS in more concise terms.
+
+As of **sf** version 1.0, the package uses the spherical geometry library **s2** to appropriately perform calculations with spatial data stored in geographic coordinate systems. When working with and visualizing geographic data for smaller areas, however, a _projected coordinate reference system_ that represents the data in two-dimensions on a planar surface may be preferable.
+
+While it can be a challenge to decide on the right projected CRS for your data, the **crsuggest** package can help narrow down the choices.
+
+## 5.4.1 Using the crsuggest package
+
+The core function implemented in **crsuggest** is `suggest_crs()`, which returns a tibble of possible choices for a suitable projected CRS for your data. The function works by analyzing the geometry of your input dataset then comparing it to a built-in dataset of CRS extents and choosing the CRSs that minimize the [Hausdorff distance](https://en.wikipedia.org/wiki/Hausdorff_distance) between your dataset and those extents.
+
+Let’s try this out for the Florida counties dataset.
+
+```{r}
+library(crsuggest)
+
+fl_crs <- suggest_crs(fl_counties)
+```
+
+The “best choice” is the CRS “Florida GDL Albers” coordinate reference system, which is available with four different variations on the NAD1983 datum. “Florida GDL” refers to the Florida Geographic Data Library which distributes all of its data in this [state-wide equal-area coordinate reference system](https://www.fgdl.org/metadataexplorer/fgdlfaq.html#3.1). Other large states with large or irregular extents like Florida (Texas is one such example) maintain statewide coordinate reference systems like this suitable for statewide mapping and analysis. 
+
+Let’s choose the third entry, “NAD83 (HARN) / Florida GDL Albers”, which is recommended on the Florida GDL website. Coordinate reference system transformations in **sf** are implemented in the `st_transform()` function, used below.
+
+```{r}
+chosen_fl_crs <- as.numeric(fl_crs$crs_code[3])
+fl_projected <- st_transform(fl_counties, 
+                             crs = chosen_fl_crs)
+
+head(fl_projected)
+```
+
+Note that the coordinates for the bounding box and the feature geometry have changed to much larger numbers; they are expressed in meters rather than the decimal degrees used by the NAD83 geographic coordinate system. Let’s take a closer look at our selected CRS:
+
+```{r}
+st_crs(fl_projected)
+```
+
+There is a lot more information in the CRS’s well-known text than for the NAD83 geographic CRS. Information about the base geographic CRS is provided along with parameters for a “false origin.” Whereas coordinates for geographic coordinate systems will generally be represented as longitude/latitude relative to the Prime Meridian and Equator, projected coordinate reference systems will be relative to a “false origin” that is specified relative to the area where the CRS is used (noting the USAGE section at the bottom). This “false origin” is located at -84 degrees longitude, 24 degrees latitude (SW of the Florida Keys and north of western Cuba) with a false X value of 400,000 and a false Y value of 0. In turn, X and Y values in the projected data are expressed in meters relative to this origin, which is set so all X and Y values in Florida will be positive numbers. This makes planar geometric calculations like distance, perimeter, and area straightforward.
+
+## 5.4.2 Plotting with `coord_sf()`
+
+When visualizing simple feature geometries with ggplot2’s `geom_sf()`, the `coord_sf()` method allows you to specify a coordinate reference system transformation to be used for the visualization. While `coord_sf()` will inherit the CRS of the spatial object plotted with `geom_sf()` by default, it can also modify the displayed CRS of a spatial object without performing a CRS transformation with `st_transform()`. For example:
+
+```{r}
+options(scipen = 999)
+library(ggplot2)
+
+ggplot(fl_counties) +
+  geom_sf() +
+  coord_sf(crs = chosen_fl_crs)
+```
+
+While the data are displayed on the plot in the requested coordinate reference system, the underlying _graticule_ (the grid lines and axis tick labels) default to longitude/latitude. To show the coordinates of the projected coordinate reference system, the argument `datum` can be used which controls the gridlines.
+
+```{r}
+ggplot(fl_counties) +
+  geom_sf() +
+  coord_sf(crs = chosen_fl_crs, datum = chosen_fl_crs)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
