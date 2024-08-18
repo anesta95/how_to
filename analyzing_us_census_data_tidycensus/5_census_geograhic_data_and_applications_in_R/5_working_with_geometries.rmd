@@ -1,0 +1,120 @@
+# [Working with geometries](https://walker-data.com/census-r/census-geographic-data-and-applications-in-r.html#working-with-geometries)
+
+## 5.5.1 Shifting and rescaling geometry for national US mapping
+
+A common problem for national display of the United States is the fragmented nature of US states and territories geographically. The continental United States can be displayed on a map in a relatively straightforward way, and there are a number of projected coordinate reference systems designed for correct display of the continental US. Often, analysts and cartographers then have to make decisions about how to handle Alaska, Hawaii, and Puerto Rico, which cannot be reasonably plotted using default US projections.
+
+For example, let’s take a US states shapefile obtained with tigris at low resolution and use ggplot2 to visualize it in the default geographic CRS, NAD 1983:
+
+```{r}
+library(tigris)
+library(ggplot2)
+us_states <- states(cb = T, resolution = "20m")
+
+ggplot(us_states) +
+  geom_sf() +
+  theme_void()
+```
+The plot does not work well, in part because the Aleutian Islands in far west Alaska cross the 180 degree line of longitude and are plotted on the opposite side of the map. In response, a projected coordinate reference system appropriate for the United States could be used, such as the continental US Albers Equal Area projection:
+
+```{r}
+ggplot(us_states) +
+  geom_sf() +
+  coord_sf(crs = "ESRI:102003") +
+  theme_void()
+```
+While this representation puts all territories in their appropriate locations, it is clearly not appropriate for Alaska, Hawaii, and Puerto Rico which appear distorted. This coordinate reference system is also not ideal for comparative mapping of states given the large amount of blank space between the states on the map.
+
+**tigris** offers a solution to this problem with the `shift_geometry()` function. `shift_geometry()` takes an opinionated approach to the shifting and rescaling of Alaska, Hawaii, and Puerto Rico geometries to offer four options for an alternative view of the US. The function works by projecting geometries in Alaska, Hawaii, and Puerto Rico to appropriate coordinate reference systems for those areas, then re-sizing the geometries (if requested) and moving them to an alternative layout in relationship to the rest of the US using the Albers Equal Area CRS.
+
+```{r}
+us_states_shifted <- shift_geometry(us_states)
+
+ggplot(us_states_shifted) +
+  geom_sf() +
+  theme_void()
+
+```
+This view uses two default arguments: `preserve_area = FALSE`, which shrinks Alaska and inflates Hawaii and Puerto Rico, and `position = "below"`, which places these areas below the continental United States. Alternatively, we can set `preserve_area = TRUE` and `position = "outside"` (used together below, but they can be mixed and matched) for a different view:
+
+```{r}
+us_states_outside <- shift_geometry(us_states,
+                                    preserve_area = T,
+                                    position = "outside")
+
+ggplot(us_states_outside) +
+  geom_sf() +
+  theme_void()
+```
+
+The areas of Alaska, Hawaii, and Puerto Rico are preserved relative to the continental United States, and the three areas are directionally in their correct positions while still in proximity to the continental US for national display. In addition to spatial objects obtained with tigris, `shift_geometry()` can shift and rescale other geographic datasets for display in this way. Just make sure you use the same arguments in `shift_geometry()` for all layers or they will end up misaligned!
+
+### 5.2.2 Converting polygons to points
+Most datasets obtained with tigris are returned with geometry type `POLYGON` or `MULTIPOLYGON`, reflecting the fact that Census geometries are generally areal units to which Census data are aggregated. While this makes sense for many applications, there are some instances in which the default geometry type of Census shapes is not necessary.
+
+For example, let’s say we are making a simple plot of the largest cities in the state of Texas. The `places()` function can obtain city geometries, and the `states()` function gives us the outline of the state of Texas. Two successive calls to `geom_sf()` create a graphic that displays those cities on top of the state outline.
+
+```{r}
+library(sf)
+library(dplyr)
+tx_places <- places("TX", cb = T) %>% 
+  filter(NAME %in% c("Dallas", "Fort Worth", "Houston",
+                     "Austin", "San Antonio", "El Paso")) %>% 
+  st_transform(6580)
+
+tx_outline <- states(cb = T) %>% 
+  filter(NAME == "Texas") %>% 
+  st_transform(6580)
+
+ggplot() +
+  geom_sf(data = tx_outline) +
+  geom_sf(data = tx_places, fill = "red", color = NA) +
+  theme_void()
+```
+
+The issue with this graphic is that city geographies are actually quite irregular and disjoint in practice. All six cities spread across large areas, have holes, and even in some cases include portions that are detached from the main part of the city. This information is important for local planning purposes, but are unnecessary for a state-wide map.
+
+An alternative representation is possible by converting the city polygons to points where each point represents the _centroid_ of each polygon, placed at their geometric centers. In sf, this conversion is implemented with the function `st_centroid()`. Below, we use `st_centroid()` to convert the polygons to central points, and plot those points over the outline of Texas.
+
+```{r}
+tx_centroids <- st_centroid(tx_places)
+
+ggplot() +
+  geom_sf(data = tx_outline) +
+  geom_sf(data = tx_centroids, color = "red", size = 3) +
+  theme_void()
+```
+
+The cities are displayed as circles rather than as irregular polygons, which makes more sense for visualization of the cities’ locations at this scale.
+
+### 5.5.3 Exploding multipolygon geometries to single parts
+Generally speaking, areal Census features are returned with the geometry type `MULTIPOLYGON.` This makes sense as many Census shapes - including several states - include disconnected areas such as islands that belong to the same Census area. As this is particularly significant in Florida, let’s take the example of Lee County on Florida’s western coast.
+
+```{r}
+library(mapview)
+fl_counties <- counties("FL", cb = TRUE)
+fl_projected <- st_transform(fl_counties, crs = 3087)
+
+lee <- fl_projected %>% 
+  filter(NAME == "Lee")
+
+mapview(lee)
+```
+The Lee County polygon has four distinct parts as displayed on the map: the mainland area that contains the cities of Cape Coral and Fort Myers, and three disjoint island areas. Other islands can be further extracted using techniques covered in Chapter 7. Understandably, these four areas are interpreted by R as a single feature:
+
+```lee```
+
+Specific parts of the multipolygon Lee County object can be extracted by _exploding_ the multipart geometry into single parts. This is accomplished with sf’s function `st_cast()`, which can convert spatial objects from one geometry type to another. In this example, we will “cast” Lee County as a `POLYGON` object which will create a separate row for each non-contiguous area. For analysts coming from a desktop GIS background, this will perform a similar operation to “Multipart to Singlepart” geoprocessing tools.
+
+```{r}
+lee_singlepart <- st_cast(lee, "POLYGON")
+
+lee_singlepart
+```
+The resulting spatial object now has four rows. Using row indexing, we can extract any of these rows as an individual object, such as the area representing Sanibel Island.
+
+```{r}
+sanibel <- lee_singlepart[2,]
+
+mapview(sanibel)
+```
