@@ -1,0 +1,57 @@
+# [6.1 Using geometry in tidycensus](https://walker-data.com/census-r/mapping-census-data-with-r.html#using-geometry-in-tidycensus)
+
+tidycensus wraps several common geographic data functions in the **tigris** 
+package to allow R users to return simple feature geometry pre-linked to 
+downloaded demographic data with a single function call. The key argument to
+accomplish this is `geometry = TRUE`, which is available in the core data download
+functions in tidycensus, `get_acs()`, `get_decennial()`, and `get_estimates()`.
+
+`geometry = TRUE` combines the automated data download functionality of 
+tidycensus and tigris to allow R users to bypass this process entirely. 
+The following example illustrates the use of the `geometry = TRUE` argument, 
+fetching information on median household income for Census tracts in the 
+District of Columbia. As discussed in the previous chapter, the option 
+`tigris_use_cache = TRUE` is used to cache the downloaded geographic data on the 
+user’s computer.
+
+```{r}
+library(tidycensus)
+options(tigris_use_cache = T)
+
+dc_income <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "DC",
+  year = 2020,
+  geometry = T
+)
+
+dc_income
+```
+
+As shown in the example call, the structure of the object returned by tidycensus 
+resembles the object we’ve become familiar with to this point in the book. 
+For example, median household income data are found in the `estimate` column with 
+associated margins of error in the moe column, along with a variable ID, GEOID, 
+and Census tract name. However, there are some notable differences. The geometry 
+column contains polygon feature geometry for each Census tract, allowing for a 
+linking of the estimates and margins of error with their corresponding locations 
+in Washington, DC. Beyond that, the object is associated with coordinate system 
+information - using the NAD 1983 geographic coordinate system in which Census 
+geographic datasets are stored by default.
+
+## 6.1.1 Basic mapping of sf objects with `plot()`
+Such geographic information can be difficult to understand without visualization. 
+As the returned object is a simple features object, both geometry and attributes 
+can be visualized with `plot()`. Key here is specifying the name of the column to 
+be plotted inside of brackets, which in this case is `"estimate"`.
+
+```{r}
+plot(dc_income["estimate"])
+```
+
+The `plot()` function returns a simple map showing income variation in Washington, DC. 
+Wealthier areas, as represented with warmer colors, tend to be located in the 
+northwestern part of the District. `NA` values are represented on the map in white. 
+If desired, the map can be modified further with base plotting functions.
+

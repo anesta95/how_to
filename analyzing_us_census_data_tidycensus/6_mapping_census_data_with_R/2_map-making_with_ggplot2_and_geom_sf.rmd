@@ -1,0 +1,76 @@
+# [6.2 Map-making with ggplot2 and geom_sf](https://walker-data.com/census-r/mapping-census-data-with-r.html#map-making-with-ggplot2-and-geom_sf)
+
+`geom_sf()` in **ggplot2** can be used for quick plotting of sf objects using 
+familiar **ggplot2** syntax. `geom_sf()` goes far beyond simple cartographic display. 
+The full power of **ggplot2** is available to create highly customized maps and 
+geographic data visualizations.
+
+## 6.2.1 Choropleth mapping
+One of the most common ways to visualize statistical information on a map is with 
+`choropleth mapping`. Choropleth maps use shading to represent how underlying data 
+values vary by feature in a spatial dataset. The income plot of Washington, DC 
+shown earlier in this chapter is an example of a choropleth map.
+
+In the example below, **tidycensus** is used to obtain linked ACS and spatial 
+data on median age by state for the 50 US states plus the District of Columbia 
+and Puerto Rico. For national maps, it is often preferable to generate insets of 
+Alaska, Hawaii, and Puerto Rico so that they can all be viewed comparatively with 
+the continental United States. We’ll use the `shift_geometry()` function in **tigris** 
+to shift and rescale these areas for national mapping. The argument 
+`resolution = "20m"` is necessary here for appropriate results, as it will omit 
+the long archipelago of islands to the northwest of Hawaii.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+
+us_median_age <- get_acs(
+  geography = "state",
+  variables = "B01002_001",
+  year = 2019,
+  survey = "acs1",
+  geometry = T,
+  resolution = "20m"
+) %>% 
+  shift_geometry()
+
+plot(us_median_age$geometry)
+```
+The state polygons can be styled using **ggplot2** conventions and 
+the `geom_sf()` function. With two lines of **ggplot2** code, a basic map of 
+median age by state can be created with **ggplot2** defaults.
+
+```{r}
+ggplot(data = us_median_age, aes(fill = estimate)) + geom_sf()
+```
+The `geom_sf()` function in the above example interprets the geometry of the 
+sf object (in this case, polygon) and visualizes the result as a filled 
+choropleth map. In this case, the ACS estimate of median age is mapped to the 
+default blue dark-to-light color ramp in **ggplot2**, highlighting the youngest 
+states (such as Utah) with darker blues and the oldest states (such as Maine) 
+with lighter blues.
+
+## 6.2.2 Customizing ggplot2 maps
+n many cases, map-makers using **ggplot2** will want to customize this graphic further. 
+For example, a designer may want to modify the color palette and reverse it so 
+that darker colors represent older areas. The map would also benefit from some 
+additional information describing its content and data sources. 
+These modifications can be specified in the same way a user would update a regular ggplot2 graphic. 
+The `scale_fill_distiller()` function allows users to specify a [ColorBrewer](https://colorbrewer2.org/#type=sequential&scheme=BuGn&n=3) palette 
+to use for the map, which includes a wide range of sequential, diverging, and 
+qualitative color palettes. The `labs()` function can then be used to add a 
+title, caption, and better legend label to the plot. 
+Finally, **ggplot2** cartographers will often want to use the `theme_void()` function 
+to remove the background and gridlines from the map.
+
+```{r}
+ggplot(data = us_median_age, aes(fill = estimate)) +
+  geom_sf() +
+  scale_fill_distiller(palette = "RdPu",
+                       direction = 1) +
+  labs(title = "  Median Age by State, 2019",
+       caption = "Data source: 2019 1-year ACS, US Census Bureau",
+       fill = "ACS estimate") +
+  theme_void()
+```
