@@ -173,8 +173,35 @@ gpg --keyserver key_server --refresh-keys
 
 You may receive error messages if any of your keys cannot be foudn on the key server.
 
+To recieve a gpg key from a specified keyserver when searching by name:
+
+```
+gpg --keyserver <site of keyserver> --search-keys <key name/id>
+```
+
+For example the current [posit key](https://posit.co/code-signing/) can be imported with:
+```
+gpg --keyserver keys.openpgp.org --search-keys 51C0B5BB19F92D60
+```
+
+You will need to then select `1` or the number of keys you'd like to import to confirm importing.
+
+You can also import keys with the given _keyIDs_ from a keyserver:
+
+```
+gpg --keyserver hkps://keys.openpgp.org --recv-keys 288DD1632F6E8951
+```
+
+You are also able to import a plaintext file with a gpg keys with:
+```
+gpg --import /path/to/filewith.key
+```
+
 # Resources
 * [How To Use GPG to Encrypt and Sign Messages](https://www.digitalocean.com/community/tutorials/how-to-use-gpg-to-encrypt-and-sign-messages)
 * [The GNU Privacy Handbook](https://www.gnupg.org/gph/en/manual.html)
 * [GPG/PGP Basics](https://aplawrence.com/Basics/gpg.html)
+* [What is GPG/PGP and how do I use it?](https://www.privex.io/articles/what-is-gpg)
+* [Using the GNU Privacy Guard](https://www.gnupg.org/(en)/documentation/manuals/gnupg/index.html#SEC_Contents)
+* 
 
