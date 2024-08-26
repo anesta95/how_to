@@ -1,0 +1,210 @@
+[6.5 Interactive Mapping](https://walker-data.com/census-r/mapping-census-data-with-r.html#interactive-mapping)
+
+Modern web technologies - and the integration of those technologies into R with 
+the `htmlwidgets` package, as discussed in Section 4.7.4 - 
+make the creation of interactive, explorable Census data maps straightforward.
+
+## 6.5.1 Interactive mapping with Leaflet
+With over 31,000 GitHub stars as of July 2021, the Leaflet JavaScript library 
+is one of the most popular frameworks worldwide for interactive mapping. 
+The RStudio team brought the Leaflet to R with the **leaflet** R package, 
+which now powers several approaches to interactive mapping in R. 
+The following examples cover how to visualize Census data on an interactive 
+Leaflet map using approaches from **mapview**, **tmap**, 
+and the core **leaflet** package.
+
+Let’s start by getting some illustrative data on the percentage of the 
+population aged 25 and up with a bachelor’s degree or higher from the 
+2016-2020 ACS. We’ll look at this information by Census tract in 
+Dallas County, Texas.
+
+```{r}
+library(tidycensus)
+
+dallas_bachelors <- get_acs(
+  geography = "tract",
+  variables = "DP02_0068P",
+  year = 2020,
+  state = "TX",
+  county = "Dallas",
+  geometry = T
+)
+```
+In Chapter 5, you learned how to quickly visualize geographic data obtained 
+with tigris on an interactive map by using the `mapview()` function in the 
+**mapview** package. The `mapview()` function also includes a parameter `zcol` that 
+takes a column in the dataset as an argument, and visualizes that column with
+an interactive choropleth map.
+
+
+```{r}
+library(mapview)
+mapview(dallas_bachelors, zcol = "estimate")
+```
+
+Conversion of **tmap** maps to interactive Leaflet maps is also straightforward with 
+the command `tmap_mode("view")`. After entering this command, all subsequent tmap 
+maps in your R session will be rendered as interactive Leaflet maps using the 
+same tmap syntax you’d use to make static maps.
+
+```{r}
+library(tmap)
+tmap_mode("view")
+
+tm_shape(dallas_bachelors) +
+  tm_fill(col = "estimate", palette = "magma", alpha = 0.5)
+```
+
+To switch back to static plotting mode, run the command `tmap_mode("plot")`.
+
+For more fine-grained control over your Leaflet maps, the core **leaflet** package 
+can be used. Below, we’ll reproduce the **mapview/tmap** examples using the leaflet 
+package’s native syntax. First, a color palette will be defined using the 
+`colorNumeric()` function. This function itself creates a function we’re calling 
+`pal()`, which translates data values to color values for a given color palette. 
+Our chosen color palette in this example is the viridis magma palette.
+
+```{r}
+library(leaflet)
+
+pal <- colorNumeric(
+  palette = "magma",
+  domain = dallas_bachelors$estimate
+)
+
+pal(c(10, 20, 30, 40, 50))
+```
+
+The map itself is built with a magrittr pipeline and the following steps:
+
+*The `leaflet()` function initializes the map. 
+A `data` object can be specified here or in a function that comes later in the pipeline.
+
+*`addProviderTiles()` helps you add a basemap to the map that will be shown 
+beneath your data as a reference. Several providers are built-in to the Leaflet 
+package, including the popular [Stamen](https://stamen.com/) reference maps. 
+If you are only interested in a basic basemap, the `addTiles()` function returns 
+the standard [OpenStreetMap](https://www.openstreetmap.org/#map=5/38.007/-95.844) basemap. 
+Use the built-in `providers` object to try out 
+different basemaps; it is good practice for choropleth mapping to use a 
+greyscale or muted basemap.
+
+*`addPolygons()` adds the tract polygons to the map and styles them. 
+In the code below, we are using a series of options to specify the input data; 
+to color the polygons relative to the defined color palette; 
+and to adjust the smoothing between polygon borders, the opacity, 
+and the line weight. The label argument will create a hover tooltip on the map 
+for additional information about the polygons.
+
+*`addLegend()` then creates a legend for the map, providing critical information 
+about how the colors on the map relate to the data values.
+
+```{r}
+leaflet() %>% 
+  addProviderTiles(providers$Stadia.StamenTonerLite) %>% 
+  addPolygons(data = dallas_bachelors,
+              color = ~pal(estimate),
+              weight = 0.5,
+              smoothFactor = 0.2,
+              fillOpacity = 0.5,
+              label = ~estimate) %>% 
+  addLegend(
+    position = "bottomright",
+    pal = pal,
+    values = dallas_bachelors$estimate,
+    title = "% wtih bachelor's<br/>degree"
+  )
+```
+This example only scratches the surface of what the **leaflet** R package can
+accomplish; I'd encourage you [review the documentation for more examples](https://rstudio.github.io/leaflet/).
+
+## 6.5.2 Alternative approaches to interactive mapping
+Like most interactive mapping platforms, Leaflet uses [_tiled mapping_](https://wiki.openstreetmap.org/wiki/Slippy_Map) in the 
+Web Mercator coordinate reference system. Web Mercator works well for tiled web 
+maps that need to fit within rectangular computer screens, and preserves angles 
+at large scales (zoomed-in areas) which is useful for local navigation. 
+However, it grossly distorts the area of geographic features near the poles, 
+making it inappropriate for small-scale thematic mapping of the world or world regions.
+
+Let’s illustrate this by mapping median home value by state from the 1-year ACS 
+using **leaflet**. We’ll first acquire the data with geometry using tidycensus, 
+setting the output resolution to “20m” to get low-resolution boundaries to speed 
+up our interactive mapping.
+
+```{r}
+us_value <- get_acs(
+  geography = "state",
+  variables = "B25077_001",
+  year = 2019,
+  survey = "acs1",
+  geometry = T,
+  resolution = "20m"
+)
+```
+The acquired ACS data for the US can be mapped using the same techniques as 
+with the educational attainment map for Dallas County.
+
+```{r}
+us_pal <- colorNumeric(
+  palette = "plasma",
+  domain = us_value$estimate
+)
+
+leaflet() %>% 
+  addProviderTiles(providers$Stadia.StamenTonerLite) %>% 
+  addPolygons(data = us_value,
+              color = ~us_pal(estimate),
+              weight = 0.5,
+              smoothFactor = 0.2,
+              fillOpacity = 0.5,
+              label = ~estimate) %>% 
+  addLegend(
+    position = "bottomright",
+    pal = us_pal,
+    values = us_value$estimate,
+    title = "Median home value"
+  )
+```
+The disadvantages of Web Mercator - as well as this general approach to mapping 
+the United States - are on full display. Alaska’s area is grossly distorted 
+relative to the rest of the United States. It is also difficult on this map to 
+compare Alaska and Hawaii to the continental US - which is particularly important 
+in this example as Hawaii’s median home value is the highest in the entire country. 
+The solution proposed elsewhere in this book is to use `tigris::shift_geometry()` 
+which adopts appropriate coordinate reference systems for Alaska, Hawaii, 
+and the continental US and arranges them in a better comparative fashion on the map. 
+However, this approach risks losing the interactivity of a Leaflet map.
+
+A compromise solution can involve other R packages that allow for interactive mapping. 
+An excellent option is the **ggiraph** package, which like the plotly package can 
+convert ggplot2 graphics into interactive plots. In the example below, 
+interactivity is added to a ggplot2 plot with **ggiraph**, allowing for panning and 
+zooming with a hover tooltip on a shifted and rescaled map of the US.
+
+```{r}
+library(ggiraph)
+library(scales)
+library(dplyr)
+library(tigris)
+library(ggplot2)
+
+us_value_shifted <- us_value %>% 
+  shift_geometry(position = "outside") %>% 
+  mutate(tooltip = paste(NAME, estimate, sep = ": "))
+
+gg <- ggplot(us_value_shifted, aes(fill = estimate)) +
+  geom_sf_interactive(aes(tooltip = tooltip, data_id = NAME),
+                      size = 0.1) +
+  scale_fill_viridis_c(option = "plasma", labels = label_dollar()) +
+  labs(title = "Median housing value by State, 2019",
+       caption = "Data source: 2019 1-year ACS, US Census Bureau",
+       fill = "ACS estimate") +
+  theme_void()
+
+girafe(ggobj = gg) %>% 
+  girafe_options(opts_hover(css = "fill:cyan;"),
+                 opts_zoom(max = 10))
+```
+
+
+
