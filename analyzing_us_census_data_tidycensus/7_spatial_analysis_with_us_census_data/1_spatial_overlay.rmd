@@ -1,0 +1,36 @@
+[7.1 Spatial overlay](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#spatial-overlay)
+
+Spatial data analysis allows practitioners to consider how geographic datasets interrelate in geographic space. This analytic functionality facilitates answering a wide range of research and analytic questions that would otherwise prove difficult without reference to a dataset’s geographic properties.
+
+One common use-case employed by the geospatial analyst is spatial overlay. Key to the concept of spatial overlay is the representation of geographic datasets as layers in a GIS. This representation is exemplified by the graphic below:
+
+![layers-view](../../.imgs/layers-view.png)
+
+In this representation, different components of the landscape that interact in the real world are abstracted out into different layers, represented by different geometries. For example, Census tracts might be represented as polygons; customers as points; and roads as linestrings. Separating out these components has significant utility for the geospatial analyst, however. By using spatial analytic tools, a researcher could answer questions like “How many customers live within a given Census tract?” or “Which roads intersect a given Census tract?”.
+
+## 7.1.1 Note: aligning coordinate reference systems
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
