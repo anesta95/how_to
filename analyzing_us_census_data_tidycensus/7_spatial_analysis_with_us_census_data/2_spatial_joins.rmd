@@ -1,0 +1,184 @@
+[7.2 Spatial joins](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#spatial-joins)
+
+_Spatial joins_ extend the concepts in spatial overlay by transferring attributes between spatial layers. Conceptually, spatial joins can be thought of like the table joins covered in Section 6.4.1 where the equivalent of a “key field” used to match rows is a spatial relationship defined by a spatial predicate. Spatial joins in R are implemented in **sf**’s `st_join()` function. This section covers two common use cases for spatial joins with Census data. The first topic is the _point-in-polygon spatial join_, where a table of coordinates is matched to Census polygons to determine demographic characteristics around those locations. The second topic covers _polygon-in-polygon spatial joins_, where smaller Census shapes are matched to larger shapes.
+
+## 7.2.1 Point-in-polygon spatial joins
+Analysts are commonly tasked with matching point-level data to Census shapes in order to study demographic differences. For example, a marketing analyst may have a dataset of customers and needs to understand the characteristics of those customers’ neighborhoods in order to target products efficiently. Similarly, a health data analyst may need to match neighborhood demographic data to patient information to understand inequalities in patient outcomes. This scenario is explored in this section.
+
+Let’s consider a hypothetical task where a health data analyst in Gainesville, Florida needs to determine the percentage of residents age 65 and up who lack health insurance in patients’ neighborhoods. The analyst has a dataset of patients with patient ID along with longitude and latitude information.
+
+```{r}
+library(tidyverse)
+library(sf)
+library(tidycensus)
+library(mapview)
+
+gainesville_patients <- tibble(
+  patient_id = 1:10,
+  longitude = c(-82.308131, -82.311972, -82.361748, -82.374377, 
+                -82.38177, -82.259461, -82.367436, -82.404031, 
+                -82.43289, -82.461844),
+  latitude = c(29.645933, 29.655195, 29.621759, 29.653576, 
+               29.677201, 29.674923, 29.71099, 29.711587, 
+               29.648227, 29.624037)
+)
+```
+
+Whereas the spatial overlay example in the previous section used spatial datasets from tigris that already include geographic information, this dataset needs to be converted to a simple features object. The st_as_sf() function in the sf package can take an R data frame or tibble with longitude and latitude columns like this and create a dataset of geometry type POINT. By convention, the coordinate reference system used for longitude / latitude data is WGS 1984, represented with the EPSG code 4326. We’ll need to specify this CRS in st_as_sf() so that sf can locate the points correctly before we transform to an appropriate projected coordinate reference system with st_transform().
+
+```{r}
+# CRS: NAD83(2011) / Florida North
+gainesville_sf <- gainesville_patients %>% 
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) %>% 
+  st_transform(6440)
+```
+
+Once prepared as a spatial dataset, the patient information can be mapped.
+
+```{r}
+mapview(
+  gainesville_sf,
+  col.regions = "red",
+  legend = FALSE
+)
+```
+
+As the patient data are now formatted as a simple features object, the next step is to acquire data on health insurance from the American Community Survey. A pre-computed percentage from the ACS Data Profile is available at the Census tract level, which will be used in the example below. Users who require a more granular geography can construct this information from the ACS Detailed Tables at the block group level using table B27001 and techniques learned in Section 3.3.2. As Gainesville is contained within Alachua County, Florida, we can obtain data from the 2015-2019 5-year ACS accordingly.
+
+```{r}
+alachua_insurance <- get_acs(
+  geography = "tract",
+  variables = "DP03_0096P",
+  state = "FL",
+  county = "Alachua",
+  year = 2019,
+  geometry = T
+) %>% 
+  select(GEOID, pct_insured = estimate,
+         pct_insured_moe = moe) %>% 
+  st_transform(6440)
+```
+After obtaining the spatial & demographic data with `get_acs()` and the `geometry = TRUE` argument, two additional commands help pre-process the data for the spatial join. The call to `select()` retains three non-geometry columns in the simple features object: `GEOID`, which is the Census tract ID, and the ACS estimate and MOE renamed to `pct_insured` and `pct_insured_moe`, respectively. This formats the information that will be appended to the patient data in the spatial join. The `st_transform()` command then aligns the coordinate reference system of the Census tracts with the CRS used by the patient dataset.
+
+Before computing the spatial join, the spatial relationships between patient points and Census tract demographics can be visualized interactively with `mapview()`, layering two interactive views with the `+` operator.
+
+```{r}
+mapview(
+  alachua_insurance,
+  zcol = "pct_insured",
+  layer.name = "% with health<br/>insurance"
+) +
+  mapview(
+    gainesville_sf,
+    col.regions = "red",
+    legend = F
+  )
+```
+
+The interrelationships between patient points and tract neighborhoods can be explored on the map. These relationships can be formalized with a _spatial join_, implemented with the `st_join()` function in the **sf** package. `st_join()` returns a new simple features object that inherits geometry and attributes from a first dataset `x` with attributes from a second dataset `y` appended. Rows in `x` are matched to rows in `y` based on a spatial relationship defined by a spatial predicate, which defaults in `st_join()` to `st_intersects()`. For point-in-polygon spatial joins, this default will be sufficient in most cases unless a point falls directly on the boundary between polygons (which is not true in this example).
+
+```{r}
+patients_joined <- st_join(
+  gainesville_sf,
+  alachua_insurance
+)
+patients_joined
+```
+
+The output dataset includes the patient ID and the original `POINT` feature geometry, but also now includes GEOID information from the Census tract dataset along with neighborhood demographic information from the ACS. This workflow can be used for analyses of neighborhood characteristics in a wide variety of applications and to generate data suitable for hierarchical modeling.
+
+An issue to avoid when interpreting the results of point-in-polygon spatial joins is the _ecological fallacy_, where individual-level characteristics are inferred from that of the neighborhood. While neighborhood demographics are useful for inferring the characteristics of the environment in which an observation is located, they do not necessarily provide information about the demographics of the observation itself - particularly important when the observations represent people.
+
+## 7.2.1 Spatial joins and group-wise spatial analysis
+Spatial data operations can also be embedded in workflows where analysts are interested in understanding how characteristics vary by group. For example, while demographic data for metropolitan areas can be readily acquired using **tidycensus** functions, we might also be interested in learning about how demographic characteristics of _neighborhoods within metropolitan areas_ vary across the United States. The example below illustrates this with some important new concepts for spatial data analysts. It involves a _polygon-on-polygon spatial join_ in which attention to the spatial predicate used will be very important. Additionally, as all polygons involved are acquired with tidycensus and `get_acs()`, the section will show how `st_join()` handles column names that are duplicated between datasets.
+
+### 7.2.2.1 Spatial join data setup
+Let’s say that we are interested in analyzing the distributions of neighborhoods (defined here as Census tracts) by Hispanic population for the four largest metropolitan areas in Texas. We’ll use the variable `B01003_001` from the 2019 1-year ACS to acquire population data by core-based statistical area (CBSA) along with simple feature geometry which will eventually be used for the spatial join.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(sf)
+
+# CRS: NAD83(2011) / Texas Centric Albers Equal Area
+tx_cbsa <- get_acs(
+  geography = "cbsa",
+  variables = "B01003_001",
+  year = 2019,
+  survey = "acs1",
+  geometry = T
+) %>% 
+  filter(str_detect(NAME, "TX")) %>% 
+  slice_max(estimate, n = 4) %>% 
+  st_transform(6579)
+
+tx_cbsa
+```
+
+The filtering steps used merit some additional explanation. The expression `filter(str_detect(NAME, "TX"))` first subsets the core-based statistical area data for only those metropolitan or micropolitan areas in (or partially in) Texas. Given that string matching in `str_detect()` is case-sensitive, using `"TX"` as the search string will match rows correctly. `slice_max()`, introduced in Section 4.1, then retains the four rows with the largest population values, found in the `estimate` column. Finally, the spatial dataset is transformed to an appropriate projected coordinate reference system for the state of Texas.
+
+Given that all four of these metropolitan areas are completely contained within the state of Texas, we can obtain data on percent Hispanic by tract from the ACS Data Profile for 2015-2019.
+
+```{r}
+pct_hispanic <- get_acs(
+  geography = "tract",
+  variables = "DP05_0071P",
+  state = "TX",
+  year = 2019,
+  geometry = T
+) %>% 
+  st_transform(6579)
+
+pct_hispanic
+```
+
+The returned dataset covers Census tracts in the entirety of the state of Texas; however we only need to retain those tracts that fall within our four metropolitan areas of interest. We can accomplish this with a spatial join using `st_join()`.
+
+### 7.2.2.2 Computing and visualizing the spatial join
+We know that in `st_join()`, we request that a given spatial dataset `x`, for which geometry will be retained, gains attributes from a second spatial dataset `y` based on their spatial relationship. This spatial relationship, as in the above examples, will be defined by a spatial predicate passed to the `join` parameter. The argument `suffix` defines the suffixes to be used for columns that share the same names, which will be important given that both datasets came from **tidycensus**. The argument `left = FALSE` requests an inner spatial join, returning only those tracts that fall within the four metropolitan areas.
+
+```{r}
+hispanic_by_metro <- st_join(
+  pct_hispanic,
+  tx_cbsa,
+  join = st_within,
+  suffix = c("_tracts", "_metro"),
+  left = "FALSE"
+)
+
+hispanic_by_metro
+```
+
+The output dataset has been reduced from 5,265 Census tracts to 3,189 as a result of the inner spatial join. Notably, the output dataset now includes information for each Census tract about the metropolitan area that it falls within. This enables group-wise data visualization and analysis across metro areas such as a faceted plot:
+
+```{r}
+hispanic_by_metro %>% 
+  mutate(NAME_metro = str_replace(NAME_metro, ", Metro Area", "")) %>% 
+  ggplot() +
+  geom_density(aes(x = estimate_tracts), color = "navy", fill = "navy", alpha = 0.4) +
+  theme_minimal() +
+  facet_wrap(~NAME_metro) +
+  labs(title = "Distribution of Hispanic/Latino population by Census tract",
+       subtitle = "Largest metropolitan areas in Texas",
+       y = "Kernel density estimate",
+       x = "Percent Hispanic/Latino in Census tract")
+```
+
+Output from a spatial join operation can also be “rolled up” to a larger geography through group-wise data analysis. For example, let’s say we want to know the median value of the four distributions visualized in the plot above. As explained in Section 3.3, we can accomplish this by grouping our dataset by metro area then summarizing using the `median()` function.
+
+```{r}
+median_by_metro <- hispanic_by_metro %>% 
+  group_by(NAME_metro) %>% 
+  summarize(median_hispanic = median(estimate_tracts, na.rm = T))
+
+median_by_metro
+```
+
+The grouping column (`NAME_metro`) and the output of `summarize()` (`median_hispanic`) are returned as expected. However, the `group_by() %>% summarize()` operations also return the dataset as a simple features object with geometry, but in this case with only 4 rows. Let’s take a look at the output geometry:
+
+```{r}
+plot(median_by_metro[1,]$geometry)
+```
+The returned geometry represents the extent of the given metropolitan area (in the above example, Austin-Round Rock). The analytic process we carried out not only summarized the data by group, it also summarized the geometry by group. The typical name for this geometric process in geographic information systems is a _dissolve_ operation, where geometries are identified by group and combined to return a single larger geometry. In this case, the Census tracts are dissolved by metropolitan area, returning metropolitan area geometries. This type of process is extremely useful when creating custom geographies (e.g. sales territories) from Census geometry building blocks that may belong to the same group.
+
