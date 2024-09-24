@@ -1,0 +1,109 @@
+# [7.3 Small area time-series analysis](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#small-area-time-series-analysis)
+
+Previous chapters of this book covered techniques and methods for analyzing demographic change over time in the US Census. Section 3.4 introduced the ACS Comparison Profile along with how to use iteration to get multiple years of data from the ACS Detailed Tables; Section 4.4 then illustrated how to visualize time-series ACS data. These techniques, however, are typically only appropriate for larger geographies like counties that rarely change shape over time. In contrast, smaller geographies like Census tracts and block groups are re-drawn by the US Census Bureau with every decennial US Census, making time-series analysis for smaller areas difficult.
+
+As discussed in Section 5.3.3, the US Census Bureau tries to keep Census tract sizes relatively consistent at around 4,000 people. If a tract grows too large between Census years, the Census Bureau will subdivide it into multiple Census tracts when re-drawing tracts for the next decennial Census.
+
+While this partitioning of Census tracts makes practical sense and allows for more granular demographic analysis in 2020, it also makes time-series comparisons difficult. This is particularly important with the release of the 2016-2020 ACS, which is the first ACS dataset to use 2020 Census boundaries. A common method for resolving this issue in geographic information science is _areal interpolation_. Areal interpolation refers to the allocation of data from one set of zones to a second overlapping set of zones that may or may not perfectly align spatially. In cases of mis-alignment, some type of weighting scheme needs to be specified to determine how to allocate partial data in areas of overlap. Two such approaches for interpolation are outlined here: _area-weighted interpolation_ and _population-weighted interpolation_.
+
+To get started, let’s obtain some comparison data for Maricopa County, AZ on the number of people working from home in the 2011-2015 ACS (which uses 2010 boundaries) and the 2016-2020 ACS (which uses 2020 boundaries). We will use both interpolation methods to allocate 2011-2015 data to 2020 Census tracts.
+
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+library(sf)
+options(tigris_us_cache = T)
+
+# CRS: NAD 83 / Arizona Central
+wfh_15 <- get_acs(
+  geography = "tract",
+  variables = "B08006_017",
+  year = 2015,
+  state = "AZ",
+  county = "Maricopa",
+  geometry = TRUE
+) %>% 
+  select(estimate) %>% 
+  st_transform(26949)
+
+wfh_20 <- get_acs(
+  geography = "tract",
+  variables = "B08006_017",
+  year = 2020,
+  state = "AZ",
+  county = "Maricopa",
+  geometry = TRUE
+) %>% 
+  st_transform(26949)
+```
+
+## 7.3.1 Area-weighted areal interpolation
+_Area-weighted areal interpolation_ is implemented in **sf** with the `st_interpolate_aw()` function. This method uses the area of overlap of geometries as the interpolation weights. From a technical standpoint, an intersection is computed between the origin geometries and the destination geometries. Weights are then computed as the proportion of the overall origin area comprised by the intersection. 
+
+Those weights are applied to target variables (in this case, the information on workers from home) in accordance with the value of the `extensive` argument. If `extensive = TRUE`, as used below, weighted sums will be computed. Alternatively, if `extensive = FALSE`, the function returns weighted means.
+
+```{r}
+wfh_interpolate_aw <- st_interpolate_aw(
+  wfh_15,
+  wfh_20,
+  extensive = T
+) %>% 
+  mutate(GEOID = wfh_20$GEOID)
+```
+## 7.3.2 Population-weighted areal interpolation
+When a user computes area-weighted areal interpolation with `st_interpolate_aw()`, the function prints the following warning: `st_interpolate_aw assumes attributes are constant or uniform over areas of x`. This assumption that proportionally larger _areas_ also have proportionally more _people_ is often incorrect with respect to the geography of human settlements, and can be a source of error when using this method. An alternative method, _population-weighted areal interpolation_, can represent an improvement. As opposed to using area-based weights, population-weighted techniques estimate the populations of the intersections between origin and destination from a third dataset, then use those values for interpolation weights.
+
+This method is implemented in **tidycensus** with the `interpolate_pw()` function. This function is specified in a similar way to `st_interpolate_aw()`, but also requires a third dataset to be used as weights, and optionally a weight column to determine the relative influence of each feature in the weights dataset. For many purposes, **tidycensus** users will want to use Census blocks as the weights dataset, though users can bring alternative datasets as well. 2020 Census blocks acquired with the **tigris** package have the added benefit of `POP20` and `HOUSING20` columns in the dataset that represent population and housing unit counts, respectively, either one of which could be used to weight each block.
+
+```{r}
+maricopa_blocks <- blocks(
+  state = "AZ",
+  county = "Maricopa",
+  year = 2020
+)
+
+wfh_interpolate_pw <- interpolate_pw(
+  wfh_15,
+  wfh_20,
+  to_id = "GEOID",
+  extensive = T,
+  weights = maricopa_blocks,
+  weight_column = "POP20",
+  crs = 26949
+)
+```
+
+`interpolate_pw()` as implemented here uses a weighted block point approach to interpolation, where the input Census blocks are first converted to points using the `st_point_on_surface()` function from the **sf** package, then joined to the origin/destination intersections to produce population weights.
+
+The population-based weights differ significantly from the area-based weights for the Census tract in Gilbert. Notably, the southern-most Census tract in the example only had an area weight of 0.167, whereas the population weighting revealed that over 30 percent of the origin tract’s population is actually located there. This leads to substantive differences in the results of the area- and population-weighted approaches.
+
+The area-weighted method under-estimates the population in geographically smaller tracts, and over-estimates in larger ones; in contrast, the population-weighted method takes the underlying population distribution into account.
+
+## 7.3.3 Making small-area comparisons
+As these methods have interpolated 2011-2015 ACS estimates to 2020 Census tracts, 2011-2015 and 2016-2020 ACS data can now be compared at consistent geographies. To do this, we will join the population-weighted interpolated 2011-2015 data to the original 2016-2020 data using `left_join()` (as covered in Section 6.4), taking care to drop the geometry of the dataset on the right-hand side of the join and to specify a `suffix` argument to distinguish the two ACS estimates. We then calculate change over time from these estimates and map the result.
+
+```{r}
+wfh_shift <- wfh_20 %>% 
+  left_join(st_drop_geometry(wfh_interpolate_pw),
+            by = "GEOID",
+            suffix = c("_2020", "_2015")) %>% 
+  mutate(wfh_shift = estimate_2020 - estimate_2015)
+
+ggplot() + 
+  geom_sf(data = wfh_shift, aes(fill = wfh_shift), color = NA, 
+          alpha = 0.8) + 
+  scale_fill_distiller(palette = "PuOr", direction = -1) + 
+  labs(fill = "Shift, 2011-2015 to\n2016-2020 ACS",
+       title = "Change in work-from-home population",
+       subtitle = "Maricopa County, Arizona") + 
+  theme_void()
+```
+Notable increases in tract-level working from home are found in locations like Gilbert, Scottsdale, and Tempe on the eastern side of the metropolitan area. That said, these results may simply be a function of overall population growth in those tracts, which means that a follow-up analysis should examine change in the share of the population working from home. This would require interpolating a total workforce denominator column and calculating a percentage. Fortunately, both interpolation methods introduced in this section will interpolate all numeric columns in an input dataset, so wide-form data or data with a summary variable acquired by **tidycensus** will work well for this purpose.
+
+An advantage of using either area-weighted or population-weighted areal interpolation as covered in this section is that they can be implemented entirely with data available in **tidycensus** and **tigris**. Some users may be interested in alternative weights using datasets not included in these packages, like land use/land cover data, or may want to use more sophisticated regression-based approaches. While they are not covered here, Schroeder and Van Riper [(2013)](https://doi.org/10.1111/gean.12014) provides a good overview of these methods.
+
+As discussed in Section 3.5.1, derived margins of error (even for sums) require special methods. Given the complexity of the interpolation methods covered here, direct interpolation of margin of error columns will not take these methods into account. Analysts should interpret such columns with caution.
+
+
