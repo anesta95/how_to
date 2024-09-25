@@ -1,0 +1,73 @@
+# [7.4 Distance and proximity analysis](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#distance-and-proximity-analysis)
+
+A common use case for spatially-referenced demographic data is the analysis of _accessibility_. This might include studying the relative accessibility of different demographic groups to resources within a given region, or analyzing the characteristics of potential customers who live within a given distance of a store. Conceptually, there are a variety of ways to measure accessibility. The most straightforward method, computationally, is using straight-line (Euclidean) distances over geographic data in a projected coordinate system. A more computationally complex - but potentially more accurate - method involves the use of transportation networks to model accessibility, where proximity is measured not based on distance from a given location but instead based on travel times for a given transit mode, such as walking, cycling, or driving. This section will illustrate both types of approaches. Let’s consider the topic of accessibility to Level I and Level II trauma hospitals by Census tract in the state of Iowa. 2019 Census tract boundaries are acquired from **tigris**, and we use `st_read()` to read in a shapefile of hospital locations acquired from the US Department of Homeland Security.
+
+```{r}
+library(tigris)
+library(sf)
+library(tidyverse)
+library(jsonlite)
+
+options(tigris_use_cache = T)
+
+# CRS: NAD83 / Iowa North
+ia_tracts <- tracts("IA", cb = T, year = 2019) %>% 
+  st_transform(26975)
+
+hospital_url <- "https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Hospitals_gdb/FeatureServer/0/query?outFields=*&where=1%3D1&f=geojson"
+
+trauma <- st_read(hospital_url) %>%
+  filter(str_detect(TRAUMA, "LEVEL I\\b|LEVEL II\\b|RTH|RTC")) %>%
+  st_transform(26975) %>%
+  distinct(ID, .keep_all = TRUE)
+
+```
+
+## 7.4.1 Calculating distances
+
+To determine accessibility of Iowa Census tracts to Level I or II trauma centers, we need to identify not only those hospitals that are located in Iowa, but also those in other states near to the Iowa border, such as in Omaha, Nebraska and Rock Island, Illinois. We can accomplish this by applying a distance threshold in `st_filter()`. In this example, we use the spatial predicate `st_is_within_distance`, and set a 100km distance threshold with the `dist = 100000` argument (specified in meters, the base measurement unit of our coordinate system used).
+
+```{r}
+ia_trauma <- trauma %>% 
+  st_filter(ia_tracts,
+            .predicate = st_is_within_distance,
+            dist = 100000)
+
+ggplot() + 
+  geom_sf(data = ia_tracts, color = "NA", fill = "grey50") + 
+  geom_sf(data = ia_trauma, color = "red") + 
+  theme_void()
+
+```
+As illustrated in the visualization, the `st_filter()` operation has retained Level I and II trauma centers _within_ the state of Iowa, but also within the 100km threshold beyond the state’s borders.
+
+With the Census tract and hospital data in hand, we can calculate distances from Census tracts to trauma centers by using the `st_distance()` function in the **sf** package. `st_distance(x, y)` by default returns the dense matrix of distances computed from the geometries in `x` to the geometries in `y`. In this example, we will calculate the distances from the _centroids_ of Iowa Census tracts (reflecting the center points of each tract geometry) to each trauma center.
+
+```{r}
+dist <- ia_tracts %>%
+  st_centroid() %>%
+  st_distance(ia_trauma) 
+
+dist[1:5, 1:5]
+```
+
+A glimpse at the matrix shows distances (in meters) between the first five Census tracts in the dataset and the first five hospitals. When considering _accessibility_, we may be interested in the distance to the _nearest_ hospital to each Census tract. The code below extracts the minimum distance from the matrix for each row, converts to a vector, and divides each value by 1000 to convert values to kilometers. A quick histogram visualizes the distribution of minimum distances.
+
+```{r}
+min_dist <- dist %>% 
+  apply(1, min) %>% 
+  as.vector() %>% 
+  magrittr::divide_by(1000)
+
+hist(min_dist)
+```
+
+
+* The `apply()` function from base R is used to iterate over rows of the matrix. Matrices are a data structure not handled by the `map_*()` family of functions in the tidyverse, so base R methods must be used. In the example pipeline, the `apply()` function inherits the dist matrix object as its first argument. The second argument, `1`, refers to the margin of the matrix that `apply()` will iterate over; `1` references rows (which we want), whereas `2` would be used for columns. `min` then is the function to be applied to each row, giving us the minimum distance to a hospital for each Census tract.
+
+* The `divide_by()` function in the **magrittr** package is a convenience arithmetic function to be used in analytic pipelines as R’s arithmetic operators (e.g. `/` for division) won’t work in this way. In this example, it divides all the values by 1000 to convert meters to kilometers.
+
+While many tracts are within 10km of a trauma center, around 16 percent of Iowa Census tracts in 2019 are beyond 100km from a Level I or II trauma center, suggesting significant accessibility issues for these areas.
+
+## 7.4.2 Calculating travel times
+
