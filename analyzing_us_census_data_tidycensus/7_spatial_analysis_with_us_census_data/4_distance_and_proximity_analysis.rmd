@@ -71,3 +71,152 @@ While many tracts are within 10km of a trauma center, around 16 percent of Iowa 
 
 ## 7.4.2 Calculating travel times
 
+An alternative way to model accessibility to hospitals is through _travel times_ rather than distance, as the way that people experience access to locations is through time expended given a transportation network. While network-based accessibility may be a more accurate representation of people’s lived experiences, it is more computationally complex and requires additional tools. To perform spatial network analyses, R users will either need to obtain network data (like roadways) and use appropriate tools that can model the network; set up a routing engine that R can connect to; or connect to a hosted routing engine via a web API. In this example, we’ll use the **mapboxapi** R package to perform network analysis using [Mapbox’s travel-time Matrix API](https://docs.mapbox.com/api/navigation/matrix/).
+
+The function `mb_matrix()` in **mapboxapi** works much like `st_distance()` in that it only requires arguments for origins and destinations, and will return the dense matrix of travel times by default. In turn, much of the computational complexity of routing is abstracted away by the function. However, as routes will be computed across the state of Iowa and API usage is subject to rate-limitations, the function can take several minutes to compute for larger matrices like this one.
+
+If you are using **mapboxapi** for the first time, visit mapbox.com, register for an account, and obtain an access token. The function `mb_access_token()` installs this token in your `.Renviron` for future use.
+
+```{r}
+library(mapboxapi)
+# mb_access_token("pk.eybcasq...", install = T)
+
+times <- mb_matrix(ia_tracts, ia_trauma)
+
+times[1:5, 1:5]
+```
+
+A glimpse at the travel-time matrix shows a similar format to the distance matrix, but with travel times in minutes used instead of meters. As with the distance-based example, we can determine the minimum travel time from each tract to a Level I or Level II trauma center. In this instance, we will visualize the result on a map.
+
+```{r}
+min_time <- apply(times, 1, min)
+
+ia_tracts$time <- min_time
+
+ggplot(ia_tracts, aes(fill = time)) + 
+  geom_sf(color = NA) + 
+  scale_fill_viridis_c(option = "magma") + 
+  theme_void() + 
+  labs(fill = "Time (minutes)",
+       title = "Travel time to nearest Level I or Level II trauma hospital",
+       subtitle = "Census tracts in Iowa",
+       caption = "Data sources: US Census Bureau, US DHS, Mapbox")
+```
+
+The map illustrates considerable accessibility gaps to trauma centers across the state. Whereas urban residents typically live within 20 minutes of a trauma center, travel times in rural Iowa can exceed two hours.
+
+An advantage to using a package like **mapboxapi** for routing and travel times is that users can connect directly to a hosted routing engine using an API. Due to rate limitations, however, web APIs are likely inadequate for more advanced users who need to compute travel times at scale. There are several R packages that can connect to user-hosted routing engines which may be better-suited to such tasks. These packages include [osrm](https://github.com/rCarto/osrm) for the Open Source Routing Machine; [opentripplanner](https://docs.ropensci.org/opentripplanner/) for OpenTripPlanner; and [r5r](https://ipeagit.github.io/r5r/) for R5.
+
+## 7.4.3 Catchment areas with buffers and isochrones
+
+The above example considers a broader accessibility analysis across the state of Iowa. In many cases, however, you’ll want to analyze accessibility in a more local way. A common use case might involve a study of the demographic characteristics of a hospital _catchment_ area, defined as the area around a hospital from which patients will likely come.
+
+As with the matrix-based accessibility approach outlined above, catchment area-based proximity can be modeled with either Euclidean distances or network travel times as well. Let’s consider the example of [Iowa Methodist Medical Center in Des Moines](https://www.unitypoint.org/desmoines/iowa-methodist-medical-center.aspx), one of two Level I trauma centers in the state of Iowa.
+
+The example below illustrates the distance-based approach using a _buffer_, implemented with the `st_buffer()` function in **sf**. A buffer is a common GIS operation that represents the area within a given distance of a location. The code below creates a 5km buffer around Iowa Methodist Medical Center by using the argument `dist = 5000`.
+
+```{r}
+iowa_methodist <- filter(ia_trauma, ID == "0009850308")
+
+buf5km <- st_buffer(iowa_methodist, dist = 5000)
+```
+An alternative option is to create network-based _isochrones_, which are polygons that represent the accessible area around a given location within a given travel time for a given travel mode. Isochrones are implemented in the **mapboxapi** package with the `mb_isochrone()` function. Mapbox isochrones default to typical driving conditions around a location; this can be adjusted with the `depart_at` parameter for historical traffic and the argument `profile = "driving-traffic"`. The example below draws a 10-minute driving isochrone around Iowa Methodist for a Tuesday during evening rush hour.
+
+```{r}
+iso10min <- mb_isochrone(
+  iowa_methodist, 
+  time = 10, 
+  profile = "driving-traffic",
+  depart_at = "2022-04-05T17:00"
+  )
+```
+
+We can visualize the comparative extents of these two methods in Des Moines. Run the code on your own computer to get a synced interactive map showing the two methods. The `makeAwesomeIcon()` function in **leaflet** creates a custom icon appropriate for a medical facility; [many other icons are available for common points of interest](http://rstudio.github.io/leaflet/markers.html#awesome-icons).
+
+```{r}
+library(leaflet)
+library(leafsync)
+
+hospital_icon <- makeAwesomeIcon(icon = "ios-medical", 
+                                 markerColor = "red",
+                                 library = "ion")
+
+# The Leaflet package requires data be in CRS 4326
+map1 <- leaflet() %>% 
+  addTiles() %>%
+  addPolygons(data = st_transform(buf5km, 4326)) %>% 
+  addAwesomeMarkers(data = st_transform(iowa_methodist, 4326),
+                    icon = hospital_icon)
+
+map2 <- leaflet() %>% 
+  addTiles() %>%
+  addPolygons(data = iso10min) %>% 
+  addAwesomeMarkers(data = st_transform(iowa_methodist, 4326),
+                    icon = hospital_icon)
+
+sync(map1, map2)
+```
+
+The comparative maps illustrate the differences between the two methods quite clearly. Many areas of equal distance to the hospital do not have the same level of access; this is particularly true of areas to the south of the Raccoon/Des Moines River. Conversely, due to the location of highways, there are some areas outside the 5km buffer area that can reach the hospital within 10 minutes.
+
+## 7.4.4 Computing demographic estimates for zones with areal interpolation
+
+Common to both methods, however, is a mis-alignment between their geometries and those of any Census geographies we may use to infer catchment area demographics. As opposed to the spatial overlay analysis matching Census tracts to metropolitan areas earlier in this chapter, Census tracts or block groups on the edge of the catchment area will only be partially included in the catchment. Areal interpolation methods like those introduced in Section 7.3 can be used here to estimate the demographics of both the buffer zone and isochrone.
+
+Let’s produce interpolated estimates of the percentage of population in poverty for both catchment area definitions. This will require obtaining block group-level poverty information from the ACS for Polk County, Iowa, which encompasses both the buffer and the isochrone. The variables requested from the ACS include the number of family households with incomes below the poverty line along with total number of family households to serve as a denominator.
+
+```{r}
+library(tidycensus)
+
+polk_poverty <- get_acs(
+  geography = "block group",
+  variables = c(poverty_denom = "B17010_001",
+                poverty_num = "B17010_002"),
+  state = "IA",
+  county = "Polk",
+  geometry = T,
+  output = "wide",
+  year = 2020
+) %>% 
+  select(poverty_denomE, poverty_numE) %>% 
+  st_transform(26975)
+```
+
+We can then use population-weighted areal interpolation with `interpolate_pw()` function in **tidycensus** to estimate family poverty in both the buffer zone and the isochrone. Block weights for Polk County are obtained with **tigris**, and both the numerator and denominator columns are interpolated.
+
+```{r}
+library(glue)
+
+polk_blocks <- blocks(
+  state = "IA",
+  county = "Polk",
+  year = 2020
+)
+
+buffer_pov <- interpolate_pw(
+  from = polk_poverty,
+  to = buf5km,
+  extensive = T,
+  weights = polk_blocks,
+  weight_column = "POP20",
+  crs = 26975
+) %>% 
+  mutate(pct_poverty = 100 * (poverty_numE / poverty_denomE))
+
+iso_pov <- interpolate_pw(
+  from = polk_poverty, 
+  to = iso10min,
+  extensive = TRUE,
+  weights = polk_blocks,
+  weight_column = "POP20",
+  crs = 26975
+) %>%
+  mutate(pct_poverty = 100 * (poverty_numE / poverty_denomE))
+```
+
+The two methods return slightly different results, illustrating how the definition of catchment area impacts downstream analyses.
+
+
+
+
+
