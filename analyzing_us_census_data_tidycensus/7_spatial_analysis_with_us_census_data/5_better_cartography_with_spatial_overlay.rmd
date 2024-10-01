@@ -1,0 +1,70 @@
+[7.5 Better cartography with spatial overlay](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#better-cartography-with-spatial-overlay)
+
+As discussed in Section 6.1, one of the major benefits of working with the **tidycensus** package to get Census data in R is its ability to retrieve pre-joined feature geometry for Census geographies with the argument `geometry = TRUE`. tidycensus uses the **tigris** package to fetch these geometries, which default to the Census Bureau’s [cartographic boundary shapefiles](https://www.census.gov/geo/maps-data/data/tiger-cart-boundary.html). Cartographic boundary shapefiles are preferred to the core [TIGER/Line shapefiles](https://www.census.gov/geo/maps-data/data/tiger-line.html) in **tidycensus** as their smaller size speeds up processing and because they are pre-clipped to the US coastline.
+
+However, there may be circumstances in which your mapping requires more detail. A good example of this would be maps of New York City, in which even the cartographic boundary shapefiles include water area. For example, take this example of median household income by Census tract in Manhattan (New York County), NY:
+
+```{r}
+library(ggplot2)
+library(tidycensus)
+options(tigris_use_cache = T)
+
+mn <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "NY",
+  county = "New York",
+  year = 2020,
+  geometry = T
+)
+
+ggplot(mn) +
+  geom_sf(aes(fill = estimate)) +
+  scale_fill_viridis_c(labels = scales::label_dollar()) +
+  theme_void() +
+  labs(fill = "Median household\nincome")
+```
+
+As illustrated in the graphic, the boundaries of Manhattan include water boundaries - stretching into the Hudson and East Rivers. In turn, a more accurate representation of Manhattan’s land area might be desired. To accomplish this, a **tidycensus** user can use the core TIGER/Line shapefiles instead, then erase water area from Manhattan’s geometry.
+
+## 7.5.1 "Erasing" areas from Census polygons
+tidycensus allows users to get TIGER/Line instead of cartographic boundary shapefiles with the keyword argument `cb = FALSE`. This argument will be familiar to users of the **tigris** package, as it is used by **tigris** to distinguish between cartographic boundary and TIGER/Line shapefiles in the package.
+
+
+```{r}
+library(sf)
+
+mn2 <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "NY",
+  county = "New York",
+  geometry = T,
+  year = 2020,
+  cb = F
+) %>% 
+  st_transform(6538)
+```
+Next, the `erase_water()` function in the **tigris** package will be used to remove water area from the Census tracts. `erase_water()` works by auto-detecting US counties that surround an input dataset, obtaining an area water shapefile from the Census Bureau for those counties, then computing an erase operation to remove those water areas from the input dataset. Using TIGER/Line geometries with `cb = FALSE` is recommended as they will align with the input water areas and minimize the creation of _sliver polygons_, which are small polygons that can be created from the overlay of inconsistent spatial datasets.
+
+```{r}
+library(tigris)
+mn_erase <- erase_water(mn2)
+```
+
+Although it is not used here, `erase_water()` has an optional argument, `area_threshold`, that defines the area percentile threshold at which water areas are kept for the erase operation. The default of 0.75, used here, erases water areas with a size percentile of 75 percent and up (so, the top 25 percent). A lower area threshold can produce more accurate shapes, but can slow down the operation substantially.
+
+After erasing water area from Manhattan’s Census tracts with `erase_water()`, we can map the result:
+
+```{r}
+ggplot(mn_erase) +
+  geom_sf(aes(fill = estimate)) +
+  scale_fill_viridis_c(labels = scales::label_dollar()) +
+  theme_void() +
+  labs(fill = "Median household\nincome")
+```
+The map appears as before, but now with a more familiar representation of the extent of Manhattan.
+
+
+
+
