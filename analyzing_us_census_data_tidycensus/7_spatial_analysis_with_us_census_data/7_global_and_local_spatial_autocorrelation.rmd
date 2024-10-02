@@ -1,0 +1,31 @@
+[7.7 Global and local spatial autocorrelation](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#global-and-local-spatial-autocorrelation)
+
+The row-standardized spatial weights object named weights provides the needed information to perform exploratory spatial data analysis of median age in the Dallas-Fort Worth metropolitan area. In many cases, an analyst may be interested in understanding how the attributes of geographic features relate to those of their neighbors. Formally, this concept is called spatial autocorrelation. The concept of spatial autocorrelation relates to Waldo Tobler’s famous [“first law of geography,”](https://doi.org/10.2307/143141) which reads
+
+
+> Everything is related to everything else, but near things are more related than distant things.
+
+This formulation informs much of the theory behind spatial data science and geographical inquiry more broadly. With respect to the exploratory spatial analysis of Census data, we might be interested in the degree to which a given Census variable clusters spatially, and subsequently where those clusters are found. One such way to assess clustering is to assess the degree to which ACS estimates are similar to or differ from those of their neighbors as defined by a weights matrix. Patterns can in turn be explained as follows:
+
+* _Spatial clustering_: data values tend to be similar to neighboring data values
+* _Spatial uniformity_: data values tend to differ from neighboring data values
+* _Spatial randomness_: there is no apparent relationship between data values and those of their neighbors
+
+Given Tobler’s first law of geography, we tend to expect that most geographic phenomena exhibit some degree of spatial clustering. This section introduces a variety of methods available in R to evaluate spatial clustering using ESDA and the **spdep** package.
+
+## 7.7.1 Spatial lags and Moran's I
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
