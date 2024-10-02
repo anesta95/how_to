@@ -1,0 +1,88 @@
+[7.6 Spatial neighborhoods and spatial weights matrices](https://walker-data.com/census-r/spatial-analysis-with-us-census-data.html#spatial-neighborhoods-and-spatial-weights-matrices)
+
+The spatial capabilities of tidycensus also allow for exploratory spatial data analysis (ESDA) within R. ESDA refers to the use of datasets’ spatial properties in addition to their attributes to explore patterns and relationships. This may involve exploration of spatial patterns in datasets or identification of spatial clustering of a given demographic attribute.
+
+To illustrate how an analyst can apply ESDA to Census data, let’s acquire a dataset on median age by Census tract in the Dallas-Fort Worth, TX metropolitan area. Census tracts in the metro area will be identified using methods introduced earlier in this chapter.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+library(sf)
+library(spdep)
+options(tigris_use_cache = T)
+
+# CRS: NAD83 / Texas North Central
+dfw <- core_based_statistical_areas(cb = T, year = 2020) %>% 
+  filter(str_detect(NAME, "Dallas")) %>% 
+  st_transform(32138)
+
+dfw_tracts <- get_acs(
+  geography = "tract",
+  variables = "B01002_001",
+  state = "TX",
+  year = 2020,
+  geometry = T
+) %>% 
+  st_transform(32138) %>% 
+  st_filter(dfw, .predicate = st_within) %>% 
+  na.omit()
+
+ggplot(dfw_tracts) +
+  geom_sf(aes(fill = estimate), color = NA) +
+  scale_fill_viridis_c() +
+  theme_void()
+```
+## 7.6.1 Understanding spatial neighborhoods
+Exploratory spatial data analysis relies on the concept of a _neighborhood_, which is a representation of how a given geographic feature (e.g. a given point, line, or polygon) interrelates with other features nearby. The workhorse package for exploratory spatial data analysis in R is **spdep**, which includes a wide range of tools for exploring and modeling spatial data. As part of this framework, **spdep** supports a variety of neighborhood definitions. These definitions include:
+
+* _Proximity-based neighbors_, where neighboring features are identified based on some measure of distance. Neighbors might be defined as those that fall within a given distance threshold (e.g. all features within 2km of a given feature) or as k-nearest neighbors (e.g. the nearest eight features to a given feature).
+
+* _Graph-based neighbors_, where neighbors are defined through network relationships (e.g. along a street network).
+
+* _Contiguity-based neighbors_, used when geographic features are polygons. Options for contiguity-based spatial relationships include queen’s case neighbors, where all polygons that share at least one vertex are considered neighbors; and rook’s case neighbors, where polygons must share at least one line segment to be considered neighbors.
+
+In this example, we’ll choose a queen’s case contiguity-based neighborhood definition for our Census tracts. We implement this with the function `poly2nb()`, which can take an **sf** object as an argument and produce a neighbors list object. We use the argument `queen = TRUE` to request queen’s case neighbors explicitly (though this is the function default).
+
+```{r}
+neighbors <- poly2nb(dfw_tracts, queen = T)
+
+summary(neighbors)
+```
+
+On average, the Census tracts in the Dallas-Fort Worth metropolitan area have 6.43 neighbors. The minimum number of neighbors in the dataset is 2 (there are eight such tracts), and the maximum number of neighbors is 17 (the tract at row index 1635). An important caveat to keep in mind here is that tracts with few neighbors may actually have more neighbors than listed here given that we have restricted the tract dataset to those tracts within the Dallas-Fort Worth metropolitan area. In turn, our analysis will be influenced by _edge effects_ as neighborhoods on the edge of the metropolitan area are artificially restricted.
+
+Neighborhood relationships can be visualized using plotting functionality in **spdep**, with blue lines connecting each polygon with its neighbors.
+
+```{r}
+dfw_coords <- dfw_tracts %>% 
+  st_centroid() %>% 
+  st_coordinates()
+
+plot(dfw_tracts$geometry)
+plot(neighbors,
+     coords = dfw_coords,
+     add = T,
+     col ="blue",
+     points = F)
+```
+Additionally, row indices for the neighbors of a given feature can be readily extracted from the neighbors list object.
+
+```{r}
+# Get the row indices of the neighbors of the Census tract at row index 1
+neighbors[[1]]
+
+```
+
+## 7.6.2 Generating the spatial weights matrix
+
+To perform exploratory spatial data analysis, we can convert the neighbors list object into _spatial weights_. Spatial weights define how metrics associated with a feature’s neighbors should be weighted. Weight generation is implemented in the `nb2listw()` function, to which we pass the neighbors object and specify a style of weights. The default, `style = "W"`, produces a row-standardized weights object where the weights for all neighbors of a given feature sum to 1. This is the option you would choose when analyzing neighborhood means. An alternative option, `style = "B"`, produces binary weights where neighbors are given the weight of 1 and non-neighbors take the weight of 0. This style of weights is useful for producing neighborhood sums.
+
+In the example below, we create row-standardized spatial weights for the Dallas-Fort Worth Census tracts and check their values for the feature at row index 1.
+
+```{r}
+weights <- nb2listw(neighbors, style = "W")
+
+weights$weights[[1]]
+```
+Given that the Census tract at row index 1 has seven neighbors, each neighbor is assigned the weight 0.1428571.
