@@ -14,18 +14,65 @@ This formulation informs much of the theory behind spatial data science and geog
 Given Tobler’s first law of geography, we tend to expect that most geographic phenomena exhibit some degree of spatial clustering. This section introduces a variety of methods available in R to evaluate spatial clustering using ESDA and the **spdep** package.
 
 ## 7.7.1 Spatial lags and Moran's I
+Spatial weights matrices can be used to calculate the _spatial lag_ of a given attribute for each observation in a dataset. The spatial lag refers to the neighboring values of an observation given a spatial weights matrix. As discussed above, row-standardized weights matrices will produce lagged means, and binary weights matrices will produce lagged sums. Spatial lag calculations are implemented in the function `lag.listw()`, which requires a spatial weights list object and a numeric vector from which to compute the lag.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(tigris)
+library(sf)
+library(spdep)
+options(tigris_use_cache = T)
+
+# CRS: NAD83 / Texas North Central
+dfw <- core_based_statistical_areas(cb = TRUE, year = 2020) %>%
+  filter(str_detect(NAME, "Dallas")) %>%
+  st_transform(32138)
+
+dfw_tracts <- get_acs(
+  geography = "tract",
+  variables = "B01002_001",
+  state = "TX",
+  year = 2020,
+  geometry = TRUE
+) %>%
+  st_transform(32138) %>%
+  st_filter(dfw, .predicate = st_within) %>%
+  na.omit()
+
+neighbors <- poly2nb(dfw_tracts, queen = TRUE)
+weights <- nb2listw(neighbors, style = "W")
 
 
+dfw_tracts$lag_estimate <- lag.listw(weights, dfw_tracts$estimate)
+```
+The code above creates a new column in `dfw_tracts`, `lag_estimate`, that represents the average median age for the neighbors of each Census tract in the Dallas-Fort Worth metropolitan area. Using this information, we can draw a scatterplot of the ACS estimate vs. its lagged mean to do a preliminary assessment of spatial clustering in the data.
 
+```{r}
+ggplot(dfw_tracts, aes(x = estimate, y = lag_estimate)) +
+  geom_point(alpha = 0.3) +
+  geom_abline(color = "red") +
+  theme_minimal() +
+  labs(
+    title = "Median age by Census tract, Dallas-Fort Worth TX",
+    x = "Median age",
+    y = "Spatial lag, median age",
+    caption = "Data source: 2016-2020 ACS via the tidycensus R package.\nSpatial relationships based on queens-case polygon contiguity."
+  )
+```
+The scatterplot suggests a positive correlation between the ACS estimate and its spatial lag, representative of spatial autocorrelation in the data. This relationship can be evaluated further by using a test of global spatial autocorrelation. The most common method used for spatial autocorrelation evaluation is Moran’s I, which can be interpreted similar to a correlation coefficient but for the relationship between observations and their neighbors. The statistic is computed as:
 
+I=\frac{N}{W} \frac{\sum_i \sum_j w_{i j}\left(x_i-\bar{x}\right)\left(x_j-\bar{x}\right)}{\sum_i\left(x_i-\bar{x}\right)^2}
 
+where w_{i j} represents the spatial weights matrix, N is the number of spatial units denoted by i and j and W is the sum of the spatial weights.
 
+Moran's I is implemented in **spdep** with the `moran.test()` function, which requires a numeric vector and a spatial weights list object.
 
+```{r}
+moran.test(dfw_tracts$estimate, weights)
+```
+The Moran’s I statistic of 0.292 is positive, and the small p-value suggests that we reject the null hypothesis of spatial randomness in our dataset. (See Section 8.2.4 for additional discussion of p-values). As the statistic is positive, it suggests that our data are _spatially clustered_; a negative statistic would suggest spatial uniformity. In a practical sense, this means that Census tracts with older populations tend to be located near one another, and Census tracts with younger populations also tend to be found in the same areas.
 
-
-
-
-
-
+## 7.7.2 Local spatial autocorrelation
 
 
