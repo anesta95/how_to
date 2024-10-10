@@ -74,5 +74,135 @@ moran.test(dfw_tracts$estimate, weights)
 The Moran’s I statistic of 0.292 is positive, and the small p-value suggests that we reject the null hypothesis of spatial randomness in our dataset. (See Section 8.2.4 for additional discussion of p-values). As the statistic is positive, it suggests that our data are _spatially clustered_; a negative statistic would suggest spatial uniformity. In a practical sense, this means that Census tracts with older populations tend to be located near one another, and Census tracts with younger populations also tend to be found in the same areas.
 
 ## 7.7.2 Local spatial autocorrelation
+We can explore this further with local spatial autocorrelation analysis. Local measures of spatial autocorrelation disaggregate global results to identify “hot spots” of similar values within a given spatial dataset. One such example is the [Getis-Ord local G statistic](https://doi.org/10.1111/j.1538-4632.1992.tb00261.x), which is computed as follows:
 
+G_i=\frac{\sum_j w_{i j} x_j}{\sum_{j=1}^n x_j} \text { for all } i \neq j
 
+In summary, the equation computes a ratio of the weighted average of the neighborhood values to the total sum of values for the dataset. While the default version of the local G (represented in the equation above) omits the location i from its calculation, a variant of the local G statistic, G_i∗, includes this location. Results are returned as z-scores, and implemented in the `localG()` function in **spdep**.
+
+The code below calculates the local G variant G_i∗ by re-generating the weights matrix with `include.self()`, then passing this weights matrix to the `localG()` function.
+
+```{r}
+# For Gi*, re-compute the weights with `include.self()`
+localg_weights <- nb2listw(include.self(neighbors))
+
+dfw_tracts$localG <- localG(dfw_tracts$estimate, localg_weights)
+
+ggplot(dfw_tracts) +
+  geom_sf(aes(fill = as.numeric(localG)), color = NA) +
+  scale_fill_distiller(palette = "RdYlBu") +
+  theme_void() +
+  labs(fill = "Local Gi* statistic")
+```
+
+Given that the returned results are z-scores, an analyst can choose hot spot thresholds in the statistic, calculate them with `case_when()`, then plot them accordingly.
+
+```{r}
+dfw_tracts <- dfw_tracts %>% 
+  mutate(hotspot = case_when(
+    localG >= 2.576 ~ "High cluster",
+    localG <= -2.576 ~ "Low cluster",
+    T ~ "Not significant"
+  ))
+
+ggplot(dfw_tracts) +
+  geom_sf(aes(fill = hotspot), color = "gray90", size = 0.1) +
+  scale_fill_manual(values = c("red", "blue", "gray")) +
+  theme_void()
+```
+
+The red areas on the resulting map are representative of “high” clustering of median age, where neighborhoods with older populations are surrounded by other older-age neighborhoods. “Low” clusters are represented in blue, which reflect clustering of Census tracts with comparatively youthful populations.
+
+## 7.3.3 Identifying clusters and spatial outliers with local indicators of spatial association (LISA)
+An alternative method for the calculation of local spatial autocorrelation is the local indicators of spatial association statistic, commonly referred to as [LISA or the local form of Moran’s I](https://doi.org/10.1111/j.1538-4632.1995.tb00338.x). As an extension of the Global Moran’s I statistic, the local statistic I_i for a given local feature i with neighbors j is computed as follows:
+
+I_i = z_i\sum_{j}w_{ij}z_j
+
+where z_i and z_j are expressed as deviations from the mean.
+
+LISA is a popular method for exploratory spatial data analysis in the spatial social sciences implemented in a variety of software packages. ArcGIS implements LISA in its [Cluster and Outlier Analysis geoprocessing tool](https://pro.arcgis.com/en/pro-app/latest/tool-reference/spatial-statistics/cluster-and-outlier-analysis-anselin-local-moran-s.htm); Anselin’s open-source [GeoDa](https://geodacenter.github.io/) software has a graphical interface for calculating LISA statistics; and [Python users can compute LISA using the PySAL library](https://pysal.org/esda/generated/esda.Moran_Local.html).
+
+In R, LISA can be computed using the `localmoran()` family of functions in the **spdep** package. For users familiar with using LISA in other software packages, the `localmoran_perm()` function implements LISA where statistical significance is calculated based on a conditional permutation-based approach.
+
+The example below calculates local Moran’s I statistics in a way that resembles the output from GeoDa, which returns a cluster map and a Moran scatterplot. One of the major benefits of using LISA for exploratory analysis is its ability to identify both _spatial clusters_, where observations are surrounded by similar values, and _spatial outliers_, where observations are surrounded by dissimilar values. We’ll use this method to explore clustering and the possible presence of spatial outliers with respect to Census tract median age in Dallas-Fort Worth.
+
+```{r}
+set.seed(1983)
+
+dfw_tracts$scaled_estimate <- as.numeric(scale(dfw_tracts$estimate))
+
+dfw_lisa <- localmoran_perm(
+  dfw_tracts$scaled_estimate, 
+  weights, 
+  nsim = 999L, 
+  alternative = "two.sided"
+) %>%
+  as_tibble() %>%
+  set_names(c("local_i", "exp_i", "var_i", "z_i", "p_i",
+              "p_i_sim", "pi_sim_folded", "skewness", "kurtosis"))
+
+dfw_lisa_df <- dfw_tracts %>%
+  select(GEOID, scaled_estimate) %>%
+  mutate(lagged_estimate = lag.listw(weights, scaled_estimate)) %>%
+  bind_cols(dfw_lisa)
+```
+
+The above code uses the following steps:
+
+1. First, a random number seed is set given that we are using the conditional permutation approach to calculating statistical significance. This will ensure reproducibility of results when the process is re-run.
+2. The ACS estimate for median age is converted to a z-score using scale(), which subtracts the mean from the estimate then divides by its standard deviation. This follows convention from GeoDa.
+3. LISA is computed with localmoran_perm() for the scaled value for median age, using the contiguity-based spatial weights matrix. 999 conditional permutation simulations are used to calculate statistical significance, and the argument alternative = "two.sided" will identify both statistically significant clusters and statistically significant spatial outliers.
+4. The LISA data frame is attached to the Census tract shapes after computing the lagged value for median age.
+
+The information returned by `localmoran_perm()` can be used to compute both a GeoDa-style LISA quadrant plot as well as a cluster map. The LISA quadrant plot is similar to a Moran scatterplot, but also identifies “quadrants” of observations with respect to the spatial relationships identified by LISA. The code below uses `case_when()` to recode the data into appropriate categories for the LISA quadrant plot, using a significance level of p = 0.05.
+
+```{r}
+dfw_lisa_clusters <- dfw_lisa_df %>%
+  mutate(lisa_cluster = case_when(
+    p_i >= 0.05 ~ "Not significant",
+    scaled_estimate > 0 & local_i > 0 ~ "High-high",
+    scaled_estimate > 0 & local_i < 0 ~ "High-low",
+    scaled_estimate < 0 & local_i > 0 ~ "Low-low",
+    scaled_estimate < 0 & local_i < 0 ~ "Low-high"
+  ))
+```
+
+The LISA quadrant plot then appears as follow:
+
+```{r}
+color_values <- c(`High-high` = "red", 
+                  `High-low` = "pink", 
+                  `Low-low` = "blue", 
+                  `Low-high` = "lightblue", 
+                  `Not significant` = "white")
+
+ggplot(dfw_lisa_clusters, aes(x = scaled_estimate, 
+                              y = lagged_estimate,
+                              fill = lisa_cluster)) + 
+  geom_point(color = "black", shape = 21, size = 2) + 
+  theme_minimal() + 
+  geom_hline(yintercept = 0, linetype = "dashed") + 
+  geom_vline(xintercept = 0, linetype = "dashed") + 
+  scale_fill_manual(values = color_values) + 
+  labs(x = "Median age (z-score)",
+       y = "Spatial lag of median age (z-score)",
+       fill = "Cluster type")
+```
+
+Observations falling in the top-right quadrant represent “high-high” clusters, where Census tracts with higher median ages are also surrounded by Census tracts with older populations. Statistically significant clusters - those with a p-value less than or equal to 0.05 - are colored red on the chart. The bottom-left quadrant also represents spatial clusters, but instead includes lower-median-age tracts that are also surrounded by tracts with similarly low median ages. The top-left and bottom-right quadrants are home to the spatial outliers, where values are dissimilar from their neighbors.
+
+GeoDa also implements a “cluster map” where observations are visualized in relationship to their cluster membership and statistical significance. The code below reproduces the GeoDa cluster map using **ggplot2** and `geom_sf()`.
+
+```{r}
+ggplot(dfw_lisa_clusters, aes(fill = lisa_cluster)) + 
+  geom_sf(size = 0.1) + 
+  theme_void() + 
+  scale_fill_manual(values = color_values) + 
+  labs(fill = "Cluster type")
+```
+
+The map illustrates distinctive patterns of spatial clustering by age in the Dallas-Fort Worth region. Older clusters are colored red; this includes areas like the wealthy Highland Park community north of downtown Dallas. Younger clusters are colored dark blue, and found in areas like east Fort Worth, east Dallas, and Arlington in the center of the metropolitan area. Spatial outliers appear scattered throughout the map as well; in the Dallas area, low-high clusters are Census tracts with large quantities of multifamily housing that are adjacent to predominantly single-family neighborhoods.
+
+One very useful feature of GeoDa for exploratory spatial data analysis is the ability to perform linked brushing between the LISA quadrant plot and cluster map. This allows users to click and drag on either plot and highlight the corresponding observations on the other plot. Building on the chart linking example using ggiraph introduced in Section 6.6.2, a linked brushing approach similar to GeoDa can be implemented in Shiny, and is represented in the image below and available at https://walkerke.shinyapps.io/linked-brushing/.
+
+Using the lasso select tool, you can click and drag on either the scatterplot or the map and view the corresponding observations highlighted on the other chart panel. Code to reproduce this Shiny app is available in `scripts/linked_brushing` in the book’s GitHub repository.
