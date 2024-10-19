@@ -15,7 +15,7 @@ In words, the probability that something doesn't happen is 1 minus the probabili
 
 Recall that the **union** $(\cup)$ of multiple events means the probability that **any** event occurs. The union can be thought of as an “or” statement (either event $A_1,A_2,...$ or $A_n$ occurs). Also recall that the symbol $\prod$ means to multiply all terms together.
 
-Let ${A_1,A_2,...A_{n-1},A_n$ be a set of $n$ _mutually indepndent events_. The probability of the _union_ (the union of events $A$ and $B$ is when $A$ happens, $B$ happens, or both $A$ and $B$ happen.) of these events is
+Let ${A_1,A_2,...A_{n-1},A_n}$ be a set of $n$ _mutually indepndent events_. The probability of the _union_ (the union of events $A$ and $B$ is when $A$ happens, $B$ happens, or both $A$ and $B$ happen.) of these events is
 
 $P\left(\displaystyle\bigcup_{i=1}^n A_i\right)=1-\displaystyle\prod_{i=1}^n P\left(A_i^c\right)$
 

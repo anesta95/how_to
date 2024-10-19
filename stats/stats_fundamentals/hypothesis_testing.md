@@ -64,7 +64,7 @@ We can model the standard deviation of the population using the standard deviati
 
 Thus, the standard error is:
 
-$SE(\bar{y}) = \frac{s}{sqrt{n}} \approx \frac{5.678}{\sqrt{325}} \approx 0.315$
+$SE(\bar{y}) = \frac{s}{\sqrt{n}} \approx \frac{5.678}{\sqrt{325}} \approx 0.315$
 
 Thus, based on this standard error, if the actual population mean were 46, we would expect to have our sample fall 
 

@@ -8,7 +8,7 @@ Two events are **independent** if the outcome of one event does not affect the p
 
 The **rule of product** explains how to find the probability that _all_ events occur when the events are _independent_. Specifically:
 
-$P(A and B) = P(A) * P(B)$
+$P(\text{A and B}) = P(A) * P(B)$
 
 
 

@@ -4,7 +4,7 @@ To assess how well a multiple linear regression model predicts the data one shou
 
 In the absence of any additional information, the best prediction is always the mean value. Any reduction in the **Mean Squared Error** (MSE) seen by adding in independent variables can by quantified by taking the proportion of the amount of reduction in the MSE to the old MSE derived from the model of _no_ independent variables (using just the simple mean) and subtracting it from one. This reduction is called the **coefficient of determination** $R^2$.
 
-The _coefficient of the determination_ ($R^2$) of a model is equal to $1 - \frac{MSE of the model}{MSE of the base model}$. The base model has $R^2 = 0.0$ and a perfect model would have $R^2 = 1.0$. The smaller the average distance between actual and predicted values, the closer to $1.0$ the coefficient of determination is.
+The _coefficient of the determination_ ($R^2$) of a model is equal to $1 - \frac{\text{MSE of the model}}{\text{MSE of the base model}}$. The base model has $R^2 = 0.0$ and a perfect model would have $R^2 = 1.0$. The smaller the average distance between actual and predicted values, the closer to $1.0$ the coefficient of determination is.
 
 ### Choose Variables
 A variable improves predictions when it gives information that isn’t already in the model. Independent variables tend to produce better predictions when they are:

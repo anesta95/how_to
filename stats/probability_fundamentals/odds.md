@@ -1,4 +1,4 @@
-Odds have a smiple relationship with probability. When probability is expressed as a number between 0 and 1, the relationship between probability $p$ and odds $t$ are:
+Odds have a simple relationship with probability. When probability is expressed as a number between 0 and 1, the relationship between probability $p$ and odds $t$ are:
 
 $t = \frac{p}{1 - p}$
 $p = \frac{t}{1 + t}$

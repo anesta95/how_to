@@ -83,7 +83,7 @@ $P(T∣G)$ — The probability that two children would be girls given that all t
 $P(G)$ — The probability that all three children will be girls is .5⋅.5⋅.5=.125
 $P(T)$ — The probability that at least two out of three siblings would be girls is equal to the probability that all three are girls, which is .125, plus the probability that exactly two of the children are girls, which is 3⋅.125 = .375 So the sum of these two probabilities is
 
-P(T)=.125​+.375​=.5.
+$P(T)=.125​+.375​=.5$.
 
 Inserting this into the theorem, we have
 $P(G∣T)=\frac{1⋅.125}{.5}$

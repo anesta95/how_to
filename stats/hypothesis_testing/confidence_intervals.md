@@ -38,7 +38,7 @@ $P(? \leq \mu \leq ?) = 0.95$
 
 Consider a company trial with these results and parameters:
 
-Sample size $n = 100$, $\sigma = 4 days$, and sample mean $\bar{X} = 8.5$
+Sample size $n = 100$, $\sigma = \text{4 days}$, and sample mean $\bar{X} = 8.5$
 
 If $\sigma$ and $n$ are known and $\bar{X}$ is measured, then 
 

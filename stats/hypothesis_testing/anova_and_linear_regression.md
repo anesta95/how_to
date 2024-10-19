@@ -107,7 +107,7 @@ The model prediction is the level mean $\mu_j$ for any factor in level $j$, i.e.
 
 $\text{(model prediction)} = \mu_0 + \displaystyle\sum^{l - 1}_{j=1}(\mu_j - \mu_0)x_j$
 
-In general mean comparison problems, the null hypothesis $H_0$ states that there are no differences in the population means: $\mu_0 = \mu_1 = \mu_2 = \dots$.
+In general mean comparison problems, the null hypothesis $H_0$ states that there are no differences in the population means: $\mu_0 = \mu_1 = \mu_2 = \dots$
 
 Consider the model prediction that's outlined above as a _response variable_ and the indicators as _predictor variables_:
 
