@@ -1,0 +1,109 @@
+[8.1 Indices of Segregation and Diversity](https://walker-data.com/census-r/modeling-us-census-data.html#indices-of-segregation-and-diversity)
+
+Census data can also be used to derive models for explaining patterns that occur across regions or within cities. These models draw from concepts introduced in prior chapters, but can also be used as part of explanatory frameworks or within broader analytic pipelines for statistical inference or machine learning.
+
+A large body of research in the social sciences is concerned with neighborhood segregation and diversity. Segregation as addressed here generally refers to the measurement of the extent to which two or more groups live apart from each other; diversity as a companion metric measures neighborhood heterogeneity among groups.
+
+Segregation and diversity indices are implemented in a variety of different R packages; the package recommended by this book is the **segregation** package, which includes R functions for a [variety of regional and local indices](https://journals.sagepub.com/doi/full/10.1177/0049124121986204).
+
+## 8.1.1 Data setup withi spatial analysis
+
+Much of the segregation and diversity literature focuses on race and ethnicity, which will be explored in the example below. The data setup code uses spatial methods covered in the previous three chapters to acquire Census tract-level data on population estimates for non-Hispanic white, non-Hispanic black, non-Hispanic Asian, and Hispanic populations in California, then filters those Census tracts those that intersect the largest urbanized areas by population in the state using an inner spatial join. In turn, it is an illustrative example of how spatial analysis tools can be important parts of data setup workflows for analysis.
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+library(segregation)
+library(tigris)
+library(sf)
+
+# Get California tract data by race/ethnicity
+ca_acs_data <- get_acs(
+  geography = "tract",
+  variables = c(
+    white = "B03002_003",
+    black = "B03002_004",
+    asian = "B03002_006",
+    hispanic = "B03002_012"
+  ),
+  state = "CA",
+  geometry = T,
+  year = 2019
+)
+
+# Use tidycensus to get urbanized areas by population with geometry,
+# then filter for those that have populations of 750k or more
+us_urban_areas <- get_acs(
+  geography = "urban area",
+  variables = "B01001_001",
+  geometry = T,
+  year = 2019,
+  survey = "acs1"
+) %>% 
+  filter(estimate >= 750000) %>% 
+  transmute(urban_name = str_remove(NAME, fixed(", CA Urbanized Area (2010)")))
+
+# Compute an inner spatial join between California tracts and the urbanized
+# areas, returning tracts in the largest California urban areas with the 
+# urban_name column appended
+
+ca_urban_data <- ca_acs_data %>% 
+  st_join(us_urban_areas, left = FALSE) %>% 
+  select(-NAME) %>% 
+  st_drop_geometry()
+```
+
+To summarize, the spatial analysis workflow detailed above uses the following steps:
+
+1. Data on race & ethnicity from the 2015-2019 5-year ACS for the four largest demographic groups in California is acquired with **tidycensus**’s `get_acs()` at the Census tract level with feature geometry included. Depending on the goals of the study, other racial/ethnic groups (e.g. native American, native Hawaiian/Pacific Islander) should be added or removed as needed.
+
+2. As urban areas as defined by the Census Bureau often cross state boundaries, urban areas must be obtained for the entire US with `get_acs()`. Once obtained, urban areas are filtered to only those areas with populations of 750,000 or greater, and then `transmute()` is used to retain only a new column representing the area name (along with the simple feature geometry column).
+
+3. A spatial join between the Census tract data and the urban area data is computed with `st_join()`. The argument `left = FALSE` computes an _inner spatial join_, which retains only those Census tracts that intersect the urban area boundaries, and appends the corresponding `urban_name` column to each Census tract.
+
+The data structure appears as follows:
+
+```ca_urban_data```
+
+The data are in long (tidy) form, the default used by **tidycensus**; this data structure is ideal for computing indices in the **segregation** package.
+
+## 8.1.2 The dissimilarity index
+
+The dissimilarity index is widely used to assess neighborhood segregation between two groups within a region. It is computed as follows:
+
+D=\frac{1}{2} \displaystyle\sum_{i=1}^N\left|\frac{a_i}{A}-\frac{b_i}{B}\right|
+
+where $a_i$ represents the population of group $A$ in a given areal unit $i$; 
+$A$ is the total population of that group in the study region (e.g. a metropolitan area);
+and $b_i$ and $B$ are the equivalent metrics for the second group. The index ranges from a low of 0 to a high of 1, where 0 represents perfect integration between the two groups and 1 represents complete segregation. This index is implemented in the **segregation** package with the `dissimilarity()` function.
+
+The example below computes the dissimilarity index between non-Hispanic white and Hispanic populations for the San Francisco/Oakland urbanized area. The data are filtered for only those rows that represent the target populations in the San Francisco/Oakland area, which is then piped to the `dissimilarity()` function. The function requires identification of a group column, for which we’ll use `variable`; a unit column representing the neighborhood unit, for which we’ll use `GEOID` to represent the Census tract; and a weight column that tells the function how many people are in each group.
+
+```{r}
+ca_urban_data %>% 
+  filter(variable %in% c("white", "hispanic"),
+         urban_name == "San Francisco--Oakland") %>% 
+  dissimilarity(
+    group = "variable",
+    unit = "GEOID",
+    weight = "estimate"
+  )
+```
+
+The D index of segregation between non-Hispanic white and Hispanic populations in the San Francisco-Oakland area is 0.51. This statistic, however, is more meaningful in comparison with other cities. To compute dissimilarity for each urban area, we can creatively apply tidyverse techniques covered in earlier chapters and introduce a new function, `group_modify()`, for group-wise calculation. This example follows the recommended workflow [in the segregation package documentation](https://elbersb.github.io/segregation/articles/faq.html#how-can-i-compute-indices-for-different-areas-at-once-). The code below filters the data for non-Hispanic white and Hispanic populations by Census tract, then groups the dataset by values in the `urban_name` column. The `group_modify()` function from **dplyr** then allows for the calculation of dissimilarity indices _by group_, which in this example is Census tracts within each respective urban area. It returns a combined dataset that is sorted in descending order with `arrange()` to make comparisons.
+
+```{r}
+ca_urban_data %>% 
+  filter(variable %in% c("white", "hispanic")) %>% 
+  group_by(urban_name) %>% 
+  group_modify(~dissimilarity(
+    .x,
+    group = "variable",
+    unit = "GEOID",
+    weight = "estimate"
+  )) %>% 
+  arrange(desc(est))
+```
+The Los Angeles area is the most segregated of the large urbanized areas in California with respect to non-Hispanic white and Hispanic populations at the Census tract level, followed by San Francisco/Oakland. Riverside/San Bernardino and Sacramento are the least segregated of the large urban areas in the state.
+
+## 8.1.3 Multi-group segregation indices
