@@ -71,7 +71,7 @@ The data are in long (tidy) form, the default used by **tidycensus**; this data 
 
 The dissimilarity index is widely used to assess neighborhood segregation between two groups within a region. It is computed as follows:
 
-D=\frac{1}{2} \displaystyle\sum_{i=1}^N\left|\frac{a_i}{A}-\frac{b_i}{B}\right|
+$D=\frac{1}{2} \displaystyle\sum_{i=1}^N\left|\frac{a_i}{A}-\frac{b_i}{B}\right|$
 
 where $a_i$ represents the population of group $A$ in a given areal unit $i$; 
 $A$ is the total population of that group in the study region (e.g. a metropolitan area);
@@ -107,3 +107,108 @@ ca_urban_data %>%
 The Los Angeles area is the most segregated of the large urbanized areas in California with respect to non-Hispanic white and Hispanic populations at the Census tract level, followed by San Francisco/Oakland. Riverside/San Bernardino and Sacramento are the least segregated of the large urban areas in the state.
 
 ## 8.1.3 Multi-group segregation indices
+One disadvantage of the dissimilarity index is that it only measures segregation between two groups. For a state as diverse as California, we may be interested in measuring segregation and diversity between multiple groups at a time. The **segregation** package implements two such indices: the Mutual Information Index $M$, and Theil’s Entropy Index $H$. $M$ is computed as follows for a dataset $T$:
+
+$M(\mathbf{T})=\displaystyle\sum_{u=1}^U \sum_{g=1}^G p_{u g} \log \frac{p_{u g}}{p_u p_g}$
+
+where $U$ is the total number of units $u$, $G$ is the total number of groups $g$, and $p_{ug}$ is the joint probability of being in unit $u$ and group $g$, with $p_u$ and $p_g$ referring to unit and group probabilities. Theil’s $H$ for the same dataset $T$ can then be written as:
+
+$H(T) = \frac{M(T)}{E(T)}$
+
+Where $E(T)$ is the entropy of $T$, normalizing $H$ to range between values of 0 and 1.
+
+Computing these indices is straightforward with the **segregation** package. The `mutual_total()` function computes both indices; when different regions are to be considered (like multiple urban areas, as in this example) the `mutual_within()` function will compute $M$ and $H$ by urban area with the `within` argument appropriately specified. We’ll be using the full `ca_urban_data` dataset, which includes population estimates for non-Hispanic white, non-Hispanic Black, non-Hispanic Asian, and Hispanic populations.
+
+```{r}
+mutual_within(
+  data = ca_urban_data,
+  group = "variable",
+  unit = "GEOID",
+  weight = "estimate",
+  within = "urban_name",
+  wide = T
+)
+```
+When multi-group segregation is considered using these indices, Los Angeles remains the most segregated urban area, whereas Riverside/San Bernardino is the least segregated.
+
+The **segregation** package also offers a function for local segregation analysis, `mutual_local()`, which decomposes $M$
+into unit-level segregation scores, represented by `ls`. In the example below, we will use `mutual_local()` to examine patterns of segregation across the most segregated urban area, Los Angeles.
+
+```{r}
+la_local_seg <- ca_urban_data %>% 
+  filter(urban_name == "Los Angeles--Long Beach--Anaheim") %>% 
+  mutual_local(
+    group = "variable",
+    unit = "GEOID",
+    weight = "estimate",
+    wide = T
+  )
+la_local_seg
+```
+The results can be mapped by joining the data to a dataset of Census tracts from **tigris**; the `inner_join()` function is used to retain tracts for the Los Angeles area only.
+
+```{r}
+la_tracts_seg <- tracts("CA", cb = T, year = 2019) %>% 
+  inner_join(la_local_seg, by = "GEOID")
+
+la_tracts_seg %>% 
+  ggplot(aes(fill = ls)) +
+  geom_sf(color = NA) +
+  coord_sf(crs = 26946) +
+  scale_fill_viridis_c(option = "inferno") +
+  theme_void() +
+  labs(fill = "Local\nsegregation index")
+```
+## 8.1.4 Visualizing the diversity gradient
+The diversity gradient is a concept that uses scatterplot smoothing to visualize how neighborhood diversity varies by distance or travel-time from the core of an urban region. Historically, literature on suburbanization in the social sciences assumes a more heterogeneous urban core relative to segregated and homogeneous suburban neighborhoods. The diversity gradient is a visual heuristic used to evaluate the validity of this demographic model.
+
+The entropy index for a given geographic unit is calculated as follows:
+$E = \displaystyle\sum_{r=1}^nQ_rln\frac{1}{Q_r}$
+
+$Q_r$ in this calculation represents group $r$'s proportion of the population in the geographic unit.
+
+This statistic is implemented in the `entropy()` function in the **segregation** package. As the `entropy()` function calculates this statistic for a specific unit at a time, we will group the data by tract, and then use `group_modify()` to calculate the entropy for each tract separately. The argument `base = 4` is set by convention to the number of groups in the calculation; this sets the maximum value of the statistic to 1, which represents perfect evenness between the four groups in the area. Once computed, the indices are joined to a dataset of Census tracts from California; `inner_join()` is used to retain only those tracts in the Los Angeles urbanized area.
+
+```{r}
+la_entropy <- ca_urban_data %>% 
+  filter(urban_name == "Los Angeles--Long Beach--Anaheim") %>% 
+  group_by(GEOID) %>% 
+  group_modify(~tibble(
+    entropy = entropy(
+      data = .x,
+      group = "variable",
+      weight = "estimate",
+      base = 4
+    )
+  ))
+
+la_entropy_geo <- tracts("CA", cb = T, year = 2019) %>% 
+  inner_join(la_entropy, by = "GEOID")
+```
+
+Visualization of the diversity gradient then requires a relative measurement of how far each Census tract is from the urban core. The travel-time methods available in the mapboxapi package introduced in Chapter 7 are again used here to calculate driving distance to Los Angeles City Hall for all Census tracts in the Los Angeles urbanized area.
+
+```{r}
+library(mapboxapi)
+
+la_city_hall <- mb_geocode("City Hall, Los Angeles CA")
+
+mins_to_dwntwn <- mb_matrix(la_entropy_geo, la_city_hall)
+```
+Once computed, the travel times are stored in a vector `minutes_to_downtown`, then assigned to a new column `minutes` in the entropy data frame. The tract diversity index is visualized using **ggplot2** relative to its travel time to downtown Los Angeles, with a LOESS smoother superimposed over the scatterplot to represent the diversity gradient.
+
+```{r}
+la_entropy_geo$minutes <- as.numeric(mins_to_dwntwn)
+
+ggplot(la_entropy_geo, aes(x = minutes, y = entropy)) + 
+  geom_point(alpha = 0.5) + 
+  geom_smooth(method = "loess") + 
+  theme_minimal() + 
+  scale_x_continuous(limits = c(0, 80)) + 
+  labs(title = "Diversity gradient, Los Angeles urbanized area",
+       x = "Travel-time to downtown Los Angeles in minutes, Census tracts",
+       y = "Entropy index")
+```
+
+The visualization of the diversity gradient shows that neighborhood diversity increases with driving time from the urban core in Los Angeles, peaking at about 35 minutes in free-flowing traffic from the urban core then leveling off after that. The structure of the diversity gradient suggests that Census tracts near to downtown tend to be segregated, and suburban tracts more likely to be integrated.
+
