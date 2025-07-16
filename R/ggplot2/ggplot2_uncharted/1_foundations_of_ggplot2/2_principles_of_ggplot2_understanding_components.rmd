@@ -1,0 +1,171 @@
+# What Makes ggplot2 Tick?
+
+Before `ggplot2`, base R was used to create graphics with individual functions tailors to a specific chart type.
+
+For example, here's how you'd create a boxplot, histogram, and scatterplot in base R with the `airquality` dataset.
+
+```{r}
+# Base R graphics: 
+# Box plot
+boxplot(airquality$Ozone)
+# Histograph
+hist(x = airquality$Ozone)
+# Scatterplot
+plot(x = airquality$Temp, y = airquality$Ozone)
+```
+
+In `ggplot2` you build a plot by combining components — such as data, aesthetics, layers, and scales — in a structured, sentence-like way.
+
+Instead of "Make a bar chart of sales by region and product", in `ggplot2` you would think in components: "“Using the sales data, put region on the x-axis, sales on the y-axis, and group bars by product with a unique color for each region."
+
+While this approach may seem more complex at first, it unlocks far greater flexibility and expressiveness to design your visual story.
+
+# Building Plots Like Sentences
+
+`ggplot2` consists of **seven key components** that work together to create a chart, each serving a distinct purpose.
+
+The first three components are essential — you cannot create a chart without them. The remaining four allow you to customize and refine your plot's appearance, structure, and overall presentation.
+
+## Essential Building Blocks
+
+1.  **Data**: The data is the foundation of your chart, the dataset — in R typically a `data.frame` or a `tibble`, is usually passed to the initial `ggplot()` call.
+2.  **Aesthetics**: Tell your plot how to represent your data — we call this "mapping variables to aesthetics". You define these mappings inside the `aes()` function, connecting your data columns to visual properties like position, color, or size.
+3.  **Layer**: Where your data takes shape — you choose how to draw it: as points, lines, bars, and more. Most of the time you'll use `geom_` functions to add layers, occasionally you will encounter `stat_` functions that focus on computed summaries.
+
+With these three core building blocks, you have everything you need to create a meaningful graph. The syntax remains consistent and follows this pattern:
+
+```         
+ggplot(data) +
+  aes(x, y) +
+  geom_drawsomething()
+```
+
+```{r}
+# Load ggplot2
+library(ggplot2)
+
+# Inspect the data
+str(airquality)
+
+# Create an example scatterplot
+ggplot(data = airquality) +   ## data
+  aes(x = Temp, y = Ozone) +  ## aesthetics
+  geom_point()                ## layer
+```
+
+### Boxplot
+
+Because the `Temp` variable on the x-axis is numerical (continuous), `ggplot2` doesn't automatically group or “bin” continuous variables for boxplots. So instead of multiple boxplots, you get just one for the entire range of temperatures.
+
+But you can create groups yourself by cutting the temperature into intervals using `cut()` inside the aesthetics:
+
+`cut(Temp, breaks = 5)` splits the temperature range into 5 equal-width bins.
+
+```{r}
+# Create a boxplot
+ggplot(data = airquality) + 
+  aes(x = cut(Temp, breaks = 5), y = Ozone) + 
+  geom_boxplot()
+
+```
+
+`cut(Temp, breaks = seq(50, 100, by = 10))` lets you define your own intervals.
+
+```{r}
+ggplot(data = airquality) +
+  aes(x = cut(Temp, breaks = seq(50, 100, by = 10)), y = Ozone) +
+  geom_boxplot()
+```
+
+### Stat Summary
+
+When you use two numerical variables, `stat_summary()` treats the x variable as a grouping variable and calculates summary statistics for the y values within each group. By default, it shows a pointrange displaying the mean ± one standard error.
+
+```{r}
+# Create an example stat summary
+ggplot(data = airquality) +   ## data
+  aes(x = Temp, y = Ozone) +  ## aesthetics
+  stat_summary()                ## layer
+```
+
+### Scatterplot With Month Variable
+
+To plot a different variable, just change the one mapped to the `x` aesthetic. In this case, swap `Temp` with `Month`:
+
+```{r}
+ggplot(data = airquality) +
+  aes(x = Month, y = Ozone) +
+  geom_point()
+```
+
+Since `Month` is stored as integer values (whole numbers), the result is what we’d call a **dot strip plot**: vertical stacks of points, one per month.
+
+### Scatterplot With Color Mapping
+
+You can map another variable to color by passing a column name to the `color` argument inside `aes()`.
+
+```{r}
+# Coloring points by wind speed
+
+ggplot(data = airquality) +
+  aes(x = Temp, y = Ozone, color = Wind) +
+  geom_point()
+```
+
+This creates a continuous color scale: darker or lighter colors indicate different wind speeds. The default uses a gradient of blues.
+
+## Completing the Sentence
+
+Beyond the essential building blocks, `ggplot2` automatically includes additional components with sensible defaults.
+
+This means you can start plotting without explicitly specifying these components. However, as your needs grow, you can easily customize or modify these default settings to achieve your desired look and behavior.
+
+4.  **Scales**: Let you fine-tune how data is shown. You can _customize visual representation_ (like color palettes, shapes, or labels), _modify axes_, and _control legend behavior_.
+
+Example: Overriding default with a `scale_*()` function to add a log-10 scale to the y-axis.
+
+```{r}
+ggplot(data = airquality) +
+  aes(x = Temp, y = Ozone) +
+  geom_point() +
+  scale_y_log10()
+```
+
+5.  **Coordinates**: Define the spatial context of your plot — they control _spatial transformations_, _aspect ratios_, and _zoom levels_.
+
+Example: Using the one of the `coord_*()` functions to transform the default
+Cartesian system into a circular representation.
+```{r}
+ggplot(data = airquality) +
+  aes(x = Temp, y = Ozone) +
+  geom_point() +
+  coord_radial()
+```
+
+6. **Facets**: Let you break up a plot into _small multiples_, each showing a different subset of the data. This is useful for revealing patterns across groups.
+
+Example: Using one of the `facet_*()` functions to create a series or grid
+of subplots by specifying one or more grouping variables.
+
+```{r}
+# Create a plot
+ggplot(data = airquality) +
+  aes(x = Temp, y = Ozone) +
+  geom_point() +
+  facet_wrap(~Month)
+```
+
+7. **Themes**: define the overall visual style of a plot — including _text elements_, _backgrounds_, _gridlines_, _typefaces_, and more.
+
+Use `theme_*()` functions to quickly apply a complete style, or `theme()` to fine-tune individual elements.
+Below uses `theme_minimal()` to simplify overall plot style.
+
+```{r}
+ggplot(data = airquality) +
+  aes(x = Temp, y = Ozone) +
+  geom_point() +
+  theme_minimal()
+```
+
+
+

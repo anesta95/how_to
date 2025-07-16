@@ -1,0 +1,148 @@
+# Encoding Categories
+
+Let's **add color to distinguish between drivetrain** types and uncover those patterns!
+
+- Explore the dataset variables with `names(mpg)`
+- Add the `color` aesthetic to map the drivetrain variable
+- Observe how the color reveals group-specific trends
+```{r}
+library(ggplot2)
+
+names(mpg)
+```
+
+```{r}
+# Scatter plot of engine size vs city mileage
+# Your task: Map color to drivetrain types
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(aes(color = drv))
+
+# Color helps us see group patterns:
+# - 4-wheel drive cars (red) tend to cluster
+#   with larger engines and lower mpg
+# - Front-wheel drive cars (green) often
+#   have smaller engines and better mpg
+# - Rear-wheel drive cars (cyan) are more
+#   spread out with larger engines
+```
+
+# Alternatives to Provide Aesthetics
+There are two other ways to specify the aesthetics that would produce the same result as the plot above. Can you find them?
+
+Hint: Aesthetics can be defined in their own aes() call—either inside ggplot() or at the layer level.
+
+```{r}
+# aes in the ggplot()
+ggplot(mpg, aes(x = displ, y = cty, color = drv)) +
+  geom_point()
+
+# aes on it's own
+ggplot(mpg) +
+  aes(x = displ, y = cty, color = drv) +
+  geom_point()
+
+# aes in the geom layer
+ggplot(mpg) +
+  geom_point(aes(x = displ, y = cty, color = drv))
+```
+# Mapping Multiple Aesthetics
+The previous plot used color to distinguish `drv`, which was great for spotting groups. Now, **add shapes to the points for `drv` as well** to make it easier for everyone to tell them apart.
+
+Tip: Increase the point size by passing a number to the `size` argument inside `geom_point()` so the shapes are more visible.
+
+Using multiple aesthetics (like color and shape) to encode the same variable is called _double encoding_. It can _improve accessibility_ and help viewers spot patterns more easily.
+
+```{r}
+# Double encode drv with color and shape!
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(
+    aes(color = drv, shape = drv), size = 3
+  )
+
+# If you look closely, you'll see points
+# with unexpected shape-color combinations:
+# This happens because of overplotting,
+# which can be confusing at first!
+```
+
+# Mapping for Multiple Layers
+To explore the trends in the data for the different drivetrain types, you're asked to **add regression lines** to your plot. Your colleague told you to replace the default method by `method = "lm"` to draw linear smoothings.
+
+Yay, that works 🎊 But wait — _you only get a single line?!_
+
+Fix the code below to show one line per drivetrain
+What happens if you map the `drv` column to `shape` inside `geom_smooth()`? And why?
+
+When using more than a single layer, the difference between global and local mapping is crucial! While global mappings are passed on to the layers, local mapping only applies to the individual layer.
+
+```{r}
+# Your Task: Draw one fitting per drv type
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(
+    aes(color = drv, shape = drv),
+    size = 3
+  ) +
+  geom_smooth(method = "lm")
+
+# Solution 1: Repeat color mapping locally
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(
+    aes(color = drv, shape = drv),
+    size = 3
+  ) +
+  geom_smooth(aes(color = drv), method = "lm")
+
+# Solution 2:
+# Linear fitting for all three drv types
+# -> global mapping of color (and shape)
+ggplot(mpg, aes(x = displ, y = cty,
+                color = drv, shape = drv)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm")
+```
+
+# Colorful Bars
+The barplot below shows how many data points are available for each continent in the `hyde` dataset. 
+
+Many people enjoy adding colors to their charts. How would you give each bar a different color here?
+
+Hint: Like bars, certain point shapes let you control both the inside and the outline color. To change the inside, **you’ll need the right aesthetic**.
+
+Adding color can be fun, but take a moment — **is it actually helping tell the story here**?
+
+It’s common to see bar plots where each bar has a different color. But that’s rarely helpful. Using many colors without a clear reason can distract from your main message — or even confuse your audience. It’s best to use color thoughtfully — only when it clearly adds meaning.
+
+```{r}
+# source HYDE data from URL
+hyde <- read.csv("https://www.ggplot2-uncharted.com/data/hyde.csv")
+
+ggplot(hyde, aes(x = continent)) +
+  geom_bar(aes(fill = continent)) # Adding color to the fill aesthetic here is unnecessary
+```
+# Highlight Categories
+This bubble chart shows _urban population versus the logarithmic GDP per capita, with bubble size indicating each country’s total population_.
+
+But it feels a bit... flat. It just shows the data, without telling a story.
+
+**Let’s change that: highlight Asian countries in red!**
+(As before, the `names()` function might come handy to find the right column.)
+
+Hint: Some point shapes — like the one used here — let you control both the inside and the outline color. To change the inside, _you’ll need the right aesthetic_. You can map logical expressions directly inside `aes()` — a neat way to highlight parts of your data on the fly, without mutating your dataset.
+
+```{r}
+names(hyde)
+```
+
+
+```{r}
+ggplot(
+    hyde,
+    aes(x = log(gdp_per_capita),
+        y = urban_pop)) +
+  geom_point(
+    aes(size = pop_est, fill = (continent != "Asia")),
+    alpha = 0.7, shape = 21
+  )
+```
+
+

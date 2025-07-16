@@ -1,0 +1,235 @@
+Aesthetic mappings are powerful — but they can sometimes produce **unexpected results**. In this session, we’ll explore **common pitfalls** that trip up even experienced users — from missing legends to confusing lines or plots that just don’t “look right.”
+
+You’ll learn to spot, understand, and fix these issues — so you can **debug your plots with confidence** and avoid frustration down the line.
+
+# What Could Possibly Go Wrong...
+
+This session builds directly on Aesthetics: Fundamentals. There, you learned how to map data to visual properties like color, shape, and size. Now, it’s time to look at the flip side: **when those mappings don’t behave as expected or are causing errors**.
+
+Most issues arise when the input is technically valid — but not quite what `ggplot2` needs to draw the plot you had in mind.
+
+Maybe you used the **wrong data type**, picked an **unsuitable aesthetic**, or forgot to provide **grouping information** for lines or areas.
+
+In other cases, the code runs — but the logic doesn’t hold. If a constant is mapped like a variable, or a column is placed outside `aes()`, you might end up with odd legends, blank plots, or unhelpful errors.
+
+These aren’t obscure bugs — they’re everyday mistakes. And once you learn what they look like, you’ll be able to spot and fix them quickly — keeping your plotting flow smooth and frustration-free.
+
+# What You Map Is What You Get
+Let's start with a subtle mistake that leads to misleading visuals.
+```{r}
+library(ggplot2)
+
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(aes(color = "blue"))
+```
+
+**Why is ggplot2 confusing blue with red? Why is there a legend?**
+Take a moment to think about what’s actually happening here.
+
+Okay, so what's going on?
+
+Because `"blue"` is a quoted string, `ggplot2` doesn’t search for a column. Instead, **it treats it as a  categorical variable with one level**  — so it picks the first color from the default discrete scale (the typical red), and draws a legend for this artificial group.
+
+The result: all points are red, and the legend shows a red dot labeled "blue". **It’s not just wrong — it’s deeply confusing**.
+
+A similar issue happens if you try to map a column — but wrap its name in quotation marks:
+
+```{r}
+ggplot(data = mpg, aes(x = cty, y = hwy)) + geom_point(aes(shape = "drv"))
+```
+
+## The Fix 
+Want to **apply a constant** — like making all points blue?
+- Then _set_ the value outside of `aes()`. No mapping needed.
+
+Want to **link a column to an aesthetic** — like using shape to show categories?
+- Then _map_ the column inside `aes()` — without quotation marks.
+
+```{r}
+# Setting a constant "blue"" as a visual property: blue points, no legend
+ggplot(mpg, aes(x = displ, y = cty)) + 
+  geom_point(color = "blue")
+
+# Mapping column `drv` to `shape`: three shapes, correct legend.
+ggplot(data = mpg, aes(x = cty, y = hwy)) +
+  geom_point(aes(shape = drv))
+
+```
+**Rule of thumb**: Use `aes()` for columns; set constants outside of it. That small habit will save you from a lot of silent bugs and confusing results.
+
+And while we’re at it… Here’s another detail worth knowing:
+
+Passing `blue` without quotation marks can also lead to all kinds of strange results.
+
+```{r}
+# Unknown column
+# ggplot2 returns an error because "blue" is not a column in the dataset.
+ggplot(mpg, aes(x = displ, y = cty)) + geom_point(aes(color = blue))
+
+# Unknown value
+# ggplot2 returns an error because no object named "blue" exists.
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(color = blue)
+
+# Invalid object
+# ggplot2 returns an error because blue contains an invalid value.
+blue <- "Eiffel65"
+
+ggplot(mpg, aes(x = displ, y = cty)) +
+  geom_point(color = blue)
+```
+
+# Looks Like a Mapping, Acts Like a Bug
+Here’s another common, slightly related, mistake that looks innocent — but throws an error:
+
+```{r}
+ggplot(mpg, aes(x = displ, y = cty)) + geom_point(color = drv)
+```
+It looks like we’re mapping the column `drv` to `color`, right? And we know this column definitely exists!
+
+But there’s a problem: `color = drv` is placed _outside of aes()_ — and that won’t map it to a variable.
+
+That means `ggplot2` doesn't treat it as a mapping at all. Instead, it tries to set the color to the actual contents of the `drv` column — which is a vector of values like `"f"`, `"4"`, and `"r"`.
+
+Since `geom_point()` expects a single, valid color when setting — not a whole vector of strings — `ggplot2` throws an error.
+
+## The Fix
+Want to **map a column**?
+
+- Wrap it `inside aes()` like `aes(color = drv)`
+
+```{r}
+ggplot(mpg, aes(x = displ, y = cty)) + geom_point(aes(color = drv))
+```
+Again, ask yourself: **Am I setting or mapping**?
+Now, repeat with me...
+
+**Columns inside, constants out — that's what aes() is all about**
+
+# The Right Data Type for the Job
+Sometimes an aesthetic mapping is technically valid — but semantically off. That means the column exists, but the **type of data doesn’t match what ggplot2** expects.
+
+This usually leads to two types of issues:
+
+* You map a _continuous variable to a discrete aesthetic_ (like shape or linetype) — and get an error.
+* You try to map a _continuous variable combined with a categorical aesthetic_ — and ggplot2 silently drops the aesthetic.
+
+```{r}
+# Error Thrown: mapping a continuous variable to `shape` causes an error
+ggplot(mpg, aes(x = hwy, y = displ)) + geom_point(aes(shape = cyl))
+
+# Aesthetic ignored: The continuous `fill` variable is dropped due to the discrete x-axis.
+ggplot(mpg, aes(x = class)) + geom_bar(aes(fill = displ))
+
+```
+
+## The Fix
+Want to fill bars based on a continuous variable?
+
+* _Map the same variable to both fill and group_ to ensure that the fill is correctly applied — this tells `ggplot2` to treat each value as a separate group.
+
+```{r}
+ggplot(mpg, aes(x = class)) + geom_bar(aes(fill = displ, group = displ))
+```
+# Filled With Misunderstandings
+If you’ve ever mapped a variable to `color` and wondered _why your bars are still gray_ — you’re not alone...
+
+It's one of the most common **ggplot2** gotchas. Even after almost 10 years of usage, it still happens to me sometimes
+
+```{r}
+ggplot(mpg, aes(x = drv)) + geom_bar(aes(color = drv))
+```
+The classic gray-bar issue with thin colored outlines. A legend is still shown since color is a valid aesthetic.
+
+Here's the catch:
+As `ggplot2` distinguishes between fill and outline colors, _using the color aesthetic_ can lead to confusing results.
+
+Depending on the geom (or even shape) you are using, you may want to use `color` or `fill` — or both.
+
+* Geometries that use **only one color type** — like lines or default points — apply `**color**` to the entire shape.
+* Geometries with **two color types** — like bars, boxes, or filled point shapes — use `fill` for the interior and `color` for the outline.
+
+## The Fix
+Want to _color the inside of a bar_ (or any fillable shape)?
+
+* Use `fill` — and optionally add color for a clean outline.
+
+```{r}
+# Single bars
+ggplot(mpg, aes(x = drv)) + geom_bar(aes(fill = drv))
+
+# Stacked bars
+ggplot(mpg, aes(x = class)) + 
+  geom_bar(
+    aes(fill = drv),
+    # add an outline
+    color = "black"
+  )
+```
+# Special Case: `group`
+Sometimes, you want to group your data for plotting — but without directly mapping a variable to a visible aesthetic like `color`, `shape`, or `linetype`. That’s where the `group` aesthetic comes in.
+
+Think of `group` as a behind-the-scenes instruction: “Treat these values as belonging together,” even if nothing in the plot visually encodes those groups — and thus, it also doesn't come with a legend.
+
+Let’s look at common situations where `group` comes to the rescue:
+
+```{r}
+# Separate lines: geom_line() draws a zig-zag line:
+df <- data.frame(
+  category = rep(c("A", "B", "C"), each = 3),
+  time = rep(1:3, 3),
+  value = c(3, 7, 8, 2, 6, 9, 1, 5, 4)
+)
+
+ggplot(df, aes(x = time, y = value)) +
+  geom_point() + 
+  geom_line()
+
+# To draw one line for each category, you need to tell ggplot2 how to group the
+# data. Otherwise, it will connect all observations.
+
+ggplot(df, aes(x = time, y = value)) + 
+  geom_point() + 
+  geom_line(
+    aes(group = category)
+  )
+```
+```{r}
+# Connect categories: Even though you add a `geom_line()`, you can only see points:
+df <- data.frame(
+  category = c("A", "B", "C"),
+  value = c(0, 5, 7)
+)
+
+ggplot(df, aes(x = category, y = value)) +
+  geom_point() +
+  geom_line()
+
+# Here, group = 1 is required to draw a continuous line as the discrete x-axis categories are treated individually otherwise.
+ggplot(df, aes(x = category, y = value)) +
+  geom_point() +
+  geom_line(
+    aes(group = 1)
+  )
+```
+```{r}
+# Group operations: You want to draw smoothing lines for each group, not one for all observations
+df <- data.frame(
+  year = rep(2020:2024, 10),
+  type = rep(c("A", "B"), each = 25),
+  value = c(6.7, 6.9, 7.8, 7, 7.1, 7.9, 7.2, 6.4, 6.7, 6.8, 7.6, 7.2, 7.2, 7.1, 6.7, 7.9, 7.2, 6, 7.4, 6.8, 6.5, 6.9, 6.5, 6.6, 6.7, 3.6, 16.2, 12.8, 6.3, 18.3, 14.1, 10.5, 16.5, 16.4, 16.1, 15.4, 14.8, 11.7, 10.5, 10.1, 8.5, 11, 5.7, 22.8, 18, 6.4, 10, 9.7, 15.9, 11.6)
+)
+
+ggplot(df, aes(x = year, y = value)) +
+  geom_point(aes(color = type)) +
+  geom_smooth()
+
+# If you don’t want to use encodings like `color` or `linetype` to create separate trend lines, use the group aesthetic to define them silently:
+ggplot(df, aes(x = year, y = value)) +
+  geom_point(aes(color = type)) +
+  geom_smooth(aes(group = type))
+
+```
+
+You might not need `group` often — but when the behavior of geoms seems confusing or incomplete, it’s often the missing piece.
+

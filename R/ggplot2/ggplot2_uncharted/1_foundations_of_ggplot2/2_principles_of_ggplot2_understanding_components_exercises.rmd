@@ -1,0 +1,90 @@
+# Your First Plot!
+
+Last week, you tracked how many cups of coffee you drank each day. Create a plot to show how your coffee intake varied over the week.
+
+-   Initialize a ggplot and pass the `coffee_counter` data.
+-   Map the variables to the correct positional aesthetics: the day of the week on the x-axis and the number of cups on the y-axis.
+-   Plot the values using the `geom_point()` function.
+-   Update the data to match your own coffee consumption
+
+```{r}
+library(ggplot2)
+
+# Store some data on coffee consumption
+coffee_counter <- data.frame(
+  # day of the week
+  wday = 1:7,
+  # number of cups
+  cups = c(2, 2, 1, 3, 2, 2, 2)
+)
+
+# Create the plot (your task!)
+ggplot(data = coffee_counter, 
+              aes(x = wday, y = cups)) +
+geom_point()
+```
+
+# Connecting the Dots
+
+Your coffee plot shows how much you drank each day — but right now, the dots are floating without any clear connection. Let’s fix that by **adding** a line to **highlight the progression** throughout the week.
+
+-   Start with your previous `geom_point()` plot.
+-   Add another layer to draw a line that connects the points.
+
+```{r}
+# Create the plot
+ggplot(data = coffee_counter) +
+  aes(x = wday, y = cups) +
+  geom_point() +
+  geom_line()
+```
+
+# Switching Between Chart Types
+
+Our current plot connects the dots to show how many cups were consumed across days — but a bar chart might be a better fit to highlight totals.
+
+Let’s see how the same data feels with a different geometry! **Replace the current layer with `geom_col()`** to map the number of cups (y aesthetic) to the height of the bars instead.
+
+```{r}
+# Create the plot
+ggplot(data = coffee_counter) +
+  aes(x = wday, y = cups) +
+  geom_col()
+```
+# Changing the Theme
+Want a cleaner look for your chart? Use themes to refine the overall appearance.
+
+* Try `theme_minimal()` for a simpler, more modern look.
+* Use the `base_size` argument to adjust the font size.
+
+```{r}
+# Create the plot
+ggplot(data = coffee_counter) +
+  aes(x = wday, y = cups) +
+  geom_col() +
+  theme_minimal(base_size = 20) # Default base_size is 11
+```
+# Modifying Data Types
+The previous charts are great, but the x-axis is not really self-explanatory.
+
+Instead of weekday numbers (`1` → `7`), we want to show **explicit weekday names** like `Mon` or `Tue.`
+
+* How could we adjust the data to get those labels to show up in the plot? Think about changing the type of the x variable in your data.
+
+```{r}
+# To display the weekdays as labels like "Mon"
+# or "Tue", we need to turn the numeric weekday
+# variable into a factor with the correct order.
+# This tells ggplot2 to treat it as categorical
+# data and use a discrete scale on the x-axis.
+
+coffee_counter <- data.frame(
+  wday = factor(format(ISOdate(1, 1, 1:7), "%a"), levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")), 
+  cups = c(3, 4, 5, 4, 6, 1, 2)
+)
+
+ggplot(data = coffee_counter) +
+  aes(x = wday, y = cups) +
+  geom_col()
+```
+
