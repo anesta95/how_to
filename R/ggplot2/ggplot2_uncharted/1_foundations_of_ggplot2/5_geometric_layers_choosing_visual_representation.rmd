@@ -1,0 +1,381 @@
+Bars, lines, points, and beyond — geometric layers define how your data appears on your panel. Think of them as the “verbs” in your visualization sentence.
+
+This lesson explores how to pick the right geom for the job and how different layers can be combined to tell richer, more nuanced stories.
+
+# The Final Ingredient
+
+In the previous lessons, we covered the plot’s backbone — your data, and the aesthetics that map it to visual properties. But if you tried running a plot with just those, you’ll have noticed: nothing shows up inside the panel (a.k.a. the gray area).
+
+```{r}
+library(ggplot2)
+
+ggplot(mpg) + aes(x = displ, y = cty)
+```
+
+That’s because every ggplot needs at least one layer to actually display anything. And most often, that layer is a geom\_\*().
+
+So far, you’ve already seen and used several of these layers:
+
+`geom_point()` → show individual observations `geom_line()` → connect data points `geom_col()` → display values as bars `geom_smooth()` → add trend lines `geom_text()` → label points with text
+
+You might have spotted a few more, like the bar and segment geoms, or the reference-line trio with abline, hline & vline.
+
+# Not All Geoms Want the Same Things
+
+All of the geoms listed above will happily show up when added to our "empty panel" code with just `x` and `y` mapped — well, all but one.
+
+```{r}
+# Empty
+ggplot(mpg) +
+aes(x = displ, y = cty)
+
+# Point
+ggplot(mpg) +
+aes(x = displ, y = cty) + 
+  geom_point()
+
+# Line
+ggplot(mpg) +
+aes(x = displ, y = cty) + 
+  geom_line()
+
+# Column
+ggplot(mpg) +
+aes(x = displ, y = cty) + 
+  geom_col()
+
+# Smooth
+ggplot(mpg) +
+aes(x = displ, y = cty) + 
+  geom_smooth()
+
+# Text?
+ggplot(mpg) +
+aes(x = displ, y = cty) + 
+  geom_text()
+```
+
+It’s `geom_text()` that stays silent. Not because of a bug — but because it’s still waiting for one more piece: a `label` aesthetic. While we can draw a point or bar with two coordinates, `geom_text()` and `geom_label()` need to know **what** to write.
+
+This isn’t unique to `geom_text()`. For example, `geom_point()` can’t draw a point without knowing where to place it, so it expects both `x` and `y`. Otherwise ggplot2 will throw an error and inform you about missing aesthetics:
+
+```         
+Error in `geom_point()`: Problem while setting up geom. `geom_point()` requires the following missing aesthetics: y.
+```
+
+*Every layer expects certain aesthetics to be present*:
+
+-   Geometries that require two positions, usually `x` and `y`, are the most common case.
+-   Others need a third aesthetic such as `label` for `geom_text()` or `fill` for `geom_tile()`.
+-   Some layers are minimalists: for example, `geom_bar()` only required an `x` or `y` position to place the bar — and calculates the height or width, respectively, itself.
+-   And some demand many more, often specific aesthetics such as additional `xend` and `yend` to draw a line with `geom_segment()` to define start and end coordinates.
+
+Now that you know some geoms need different numbers and types of aesthetics, let’s explore them in more detail.
+
+# A World of ~~Chart Types~~ Geoms
+
+The world of data visualization includes countless chart types. While the possibilities are virtually endless, mastering the fundamental ones is key to clear and effective communication.
+
+Below is a quick overview of chart types, grouped by their main purpose. ggplot2 can create all of them → it's just a matter of choosing the right geometric layer.
+
+## Distribution
+
+1.  Violin: `geom_violin()`
+2.  Density: `geom_density()`
+3.  Histogram: `geom_histogram()`
+4.  Boxplot: `geom_boxplot()`
+5.  Ridgeline: `{ggridges}` package
+
+## Correlation
+
+1.  Scatterplot: `geom_point()`
+2.  Heatmap: `geom_tile()`
+3.  Correlogram: `{GGally}` package
+4.  Bubble: `geom_point()`
+5.  2d Density: `geom_density_2d()`
+6.  Connected scatter: `geom_point()` and `geom_path()`
+
+## Ranking
+
+1.  Barplot: `geom_bar()`
+2.  Wordcloud: `{wordcloud}` and `{wordcloud2}` package
+3.  [Parallel](https://www.data-to-viz.com/graph/parallel.html): `{GGally}` package
+4.  Lollipop: `geom_point()`
+5.  Circular barplot: `geom_bar()`
+6.  Spider/Radar: `geom_line()`
+
+## Part of a Whole
+
+1.  Treemap: `{treemapify}` package
+2.  Venn: `{VennDiagram}` package
+3.  Donut & pie: `geom_bar()` and `coord_radial()` or `coord_polar()`
+4.  Dendrogram: `{ggdendro}` package
+5.  Circular packing: `{ggraph}` package
+
+## Evolution
+
+1.  Line: `geom_line()`
+2.  Area & stacked area: `geom_area()`
+3.  Stream: `{ggstream}` package
+4.  Timeseries: `geom_point()`
+
+## Map
+
+1.  Choropleth, hexbin, cartogram, connection, and bubble maps: `{sf}` or `{tmap}` packages
+
+## Flow
+
+1.  Chord: `{chorddiag}` and `{circlize}` packages
+2.  Network: `{igraph}` and `{ggraph}` packages
+3.  Sankey: `{ggsankey}` and `{ggalluvial}` packages
+4.  Arc: `{ggraph}` package
+5.  [Edge bundling](https://www.data-to-viz.com/graph/edge_bundling.html): `{ggraph}` package
+
+# Layer by Layer
+
+One of the most powerful ideas in `ggplot2` is that plots are built **layer by layer**. That means you’re not limited to a single geom — you can stack multiple geoms on top of the same data, or even different data.
+
+For example, you might want to:
+
+-   Show individual points *and* a trend line
+-   Create a time series with connected markers
+-   Label a few important observations
+-   Add summary statistics to a chart
+-   Use an arrow or box to highlight a finding
+
+The syntax is simple: just add more layers, as usual, with a `+` sign!
+
+Now let’s look at an example that puts layering into action — combining points, trend lines, and labels with different data and aesthetics. It’s a great way to see how layering gives you precise control over what’s drawn.
+
+```{r}
+library(ggplot2)
+
+ggplot(mpg, aes(x = displ, y = cty)) +
+  # draw a scatter plot
+  geom_point(
+    aes(color = drv)
+  ) + 
+  # add a trend line
+  geom_smooth(
+    method = "lm"
+  ) + 
+  # add labels for extreme values
+  geom_text(
+    # pass a filtered dataset
+    data = subset(mpg, cty > 30 | displ >= 6.5),
+    aes(label = model),
+    vjust = 1.4 # Move text below the points
+  )
+
+```
+
+Each layer can:
+
+-   Use the **same dataset** — like `geom_point()` and `geom_smooth()`
+-   Use the **same aesthetics** — `x` and `y` are passed globally to all layers
+
+*or:*
+
+-   Use a **different dataset** — like `geom_text()`
+-   Use **layer-specific aesthetics** — `color` is only mapped inside `geom_point()`; `label` only inside `geom_text()`
+
+Don’t forget: layers expect the `mapping` argument first. If you want to customize the dataset, use `data =` after that.
+
+Geoms are **additive** — think of it like building up a painting: first the background, then the foreground, then the annotations.
+
+***That means: the order matters too!***
+
+# Getting Things in Position
+
+So far, we’ve seen how layers control *what* gets drawn — by choosing the right geom and mapping aesthetics appropriately.
+
+But there’s another important setting that affects *where* elements appear: the `position` argument.
+
+Many geoms — especially bars, areas, boxplots, and error bars — often display *multiple groups* within the same chart. The `position` argument controls how those groups are arranged: stacked, dodged side-by-side, overlaid, or normalized to proportions.
+
+You can specify this argument in two main ways: \* Using strings like `"stack"` or `"jitter"` \* Using functions like `position_stack()` or `position_jitter()`
+
+Both approaches work — but only the function versions allow you to *fine-tune* the behavior by passing arguments:
+
+```{r}
+# Position as a string
+# Passing position as a string uses the default settings of the respective position_*() function — quick, but not customizable.
+
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  geom_point(
+    alpha = 0.5, size = 3, position = "jitter"
+  )
+
+# Position as a function
+# Passing position as a function lets you customize its behavior — for example, adjusting the amount of jitter or fixing the random noise.
+
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  geom_point(
+    alpha = 0.5, size = 3, position = position_jitter(
+      # limit horizontal spread
+      width = 0.3,
+      # ensure jittering only applies on x
+      height = 0,
+      # fix the random noise
+      seed = 12345
+    )
+  )
+```
+
+“Hold up — what’s that seed thing doing?”
+
+-   Run the code in the first tab multiple times.
+-   Notice how the points jump around each time?
+-   Now switch to the second tab and do the same.
+-   The points stay put! Change the number to use a different pattern.
+
+Tired of typing position = "jitter"?
+
+You don’t have to! Instead of writing `geom_point(position = "jitter")` every time, you can use the shorthand wrapper `geom_jitter()` — it’s just `geom_point()` with `position = "jitter"` set as the default.
+
+Just keep in mind: if you want to control how much jitter is applied or fix the randomness with a seed, you’ll still need to use `position_jitter()` directly.
+
+Now let’s explore a few common cases where `position =` unlocks powerful layout options — and helps keep your chart clear and intentional.
+
+# Flip the Perspective
+
+Area charts stack by default — values for each series accumulate vertically. That’s great for cumulative trends, but not always what you want.
+
+```{r}
+df <- data.frame(
+  time = rep(1:12, 2),
+  value = c(1, 2, 5, 3, 7, 8, 6, 9, 5, 5, 8, 4,
+            4, 5, 8, 4, 5, 7, 4, 5, 3, 4, 2, 3),
+  group = rep(c("A", "B"), each = 12)
+)
+
+ggplot(df, aes(x = time, y = value)) + 
+  geom_area(
+    aes(color = group, fill = group),
+    alpha = 0.5
+    # and, by default: position = stack
+  )
+```
+
+Note that `geom_area()`, similar to other geoms that use areas like bars or ribbons, **has two colors — an outline `color` and an inside `fill`**. In that case, the transparency, set via alpha = .5 is only applied to the fill.
+
+You can change this default behavior by specifying `position = "identity"` to plot overlapping areas without stacking. Now, one series is plotted in front of the previous.
+
+```{r}
+ggplot(df, aes(x = time, y = value)) +
+  geom_area(
+    aes(color = group, fill = group),
+    alpha = 0.5,
+    position = "identity"
+  )
+```
+And if you want to compare proportions rather than raw values, there’s a potentially lesser-known gem: `position = "fill"` — this normalizes the areas to show relative shares instead, without the need for pre-calculation!
+
+```{r}
+ggplot(df, aes(x = time, y = value)) +
+  geom_area(aes(color = group, fill = group),
+            alpha = 0.5,
+            position = "fill")
+```
+Each of the different options changes the perspective — and the story — dramatically. You have to decide which supports your main message best.
+
+# Group Up — Line Up — Dodge Right
+Bar charts stack by default too — but that’s not always ideal. Often, we want to compare groups side by side.
+
+The magic phrase? We want to _dodge_ the groups.
+
+There are two different ways to change the behavior:
+
+* `"dodge"` and `position_dodge()`
+* `"dodge2"` or `position_dodge2()`
+
+`position_dodge2()` gives you more control by offering additional arguments to control the `padding` or to `reverse` the order. By default, a padding of `0.1` is added to the bars.
+
+```{r}
+df <- data.frame(
+  category = rep(c("A", "B", "C"), times = 2),
+  value = c(2, 5, 0, 2, 3, 6),
+  year = rep(c("2020", "2024"), each = 3)
+)
+
+# Stack (default)
+ggplot(df, aes(x = category, y = value, fill = year)) + 
+  geom_col(
+    # position = "stack" # the default
+  )
+
+# Dodge
+ggplot(df, aes(x = category, y = value, fill = year)) + 
+  geom_col(
+    position = "dodge" 
+  )
+
+# Dodge2
+ggplot(df, aes(x = category, y = value, fill = year)) + 
+  geom_col(
+    position = "dodge2" 
+  )
+```
+Dodging is not limited to bar or column charts — we can apply the same logic to other geoms as well.
+
+Let's switch our column chart to a dot plot. And, to show off, label those points!
+
+To avoid overplotting in category A, we are applying dodging to both `geom_point()` and `geom_text()` with the same width to keep them aligned.
+
+Stacking, however, makes absolutely no sense in this case — don't do this at home!
+
+```{r}
+df <- data.frame(
+  category = rep(c("A", "B", "C"), times = 2),
+  value = c(2, 5, 0, 2, 3, 6),
+  year = rep(c("2020", "2024"), each = 3)
+)
+
+# Default positions
+ggplot(df, aes(x = category, y = value, fill = year)) +
+  geom_point(
+    # position = "identity", # the default
+  ) +
+  geom_text(
+    aes(label = value),
+    # position = "identity", # the default
+    hjust = -1
+  ) +
+  geom_line(
+    aes(group = category),
+    color = "#d13760"
+  )
+
+# Dodged posiitons
+ggplot(df, aes(x = category, y = value, fill = year)) +
+  geom_point(
+    position = position_dodge(width = 0.67)
+  ) +
+  geom_text(
+    aes(label = value),
+    position = position_dodge(width = 0.67),
+    hjust = -1
+  ) +
+  geom_line(
+    aes(group = category),
+    color = "#d13760"
+  )
+
+# Stacked positions (wrong)
+ggplot(df, aes(x = category, y = value, fill = year)) +
+  geom_point(
+    position = "stack"
+  ) +
+  geom_text(
+    aes(label = value),
+    position = "stack",
+    hjust = -1
+  ) +
+  geom_line(
+    aes(group = category),
+    color = "#d13760"
+  )
+```
+We have added lines to indicate the change in position — notice how they are completely off when using `"stack"`.
+
+With a solid understanding of geoms and how to position layers effectively, combined with your earlier insights into the logic, tricks, and challenges of working with aesthetics, together, these give you a powerful foundation to craft nearly any type of chart with confidence.

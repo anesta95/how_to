@@ -1,0 +1,122 @@
+# gray Gotcha again!
+
+We're trying to create a histogram comparing two distributions, but something's not working as expected. The **areas should be filled with different colors** to distinguish easily between the two variables.
+
+Please fix the code to make sure the bars are filled properly!
+
+Bonus Task: Add a black outline to the bars.
+
+```{r}
+library(ggplot2)
+
+# Build dataset with 2 distributions
+set.seed(123) # to always return the same random numbers
+data <- data.frame(
+  type = c(rep("A", 1000), rep("B", 1000)),
+  value = c(rnorm(1000), rnorm(1000, mean = 4))
+)
+
+# Histogram (2 groups)
+ggplot(data) +
+  geom_histogram(
+    aes(x = value, fill = type), color = "black" # Here `fill` controls the color inside the bars and `color` controls the outline for geom_histogram(), geom_bar()/geom_col()
+  )
+```
+
+Understanding the difference between **color** and **fill** is crucial when working with different types of geoms in `ggplot2`. This is a common source of confusion!
+
+# Line Meltdown
+
+The new analyst of "Ben & Queries" visualized the yearly ratings of two ice cream flavors 🍦
+
+But their plot looks... odd. The line jumps back and forth across years, instead of showing two clear trends. 😕
+
+Can you spot what went wrong in the code?
+
+```{r}
+df <- data.frame(
+  year = rep(2016:2024, times = 2),
+  rating = c(8.2, 8.5, 7.9, 8.1, 8, 8.4, 8.2, 8.1, 8.5, 
+             7.1, 6.4, 9.8, 4.3, 7.3, 5.9, 7.1, 8.7, 9.3),
+  flavor_type = rep(c("Classic Vanilla", "Special Flavor of the Year"), each = 9)
+)
+
+# Wrong chart, connects all the points into a single line
+ggplot(df, aes(x = year, y = rating)) +
+  geom_line(aes(linetype = "flavor_type")) +
+  labs(title = "Ben & Queries Flavor Trends: Calm Vanilla, Wild Specials")
+
+# Correct chart, one line per category
+ggplot(df, aes(x = year, y = rating)) +
+  geom_line(aes(linetype = flavor_type)) +
+  labs(title = "Ben & Queries Flavor Trends: Calm Vanilla, Wild Specials")
+```
+
+Aesthetics **map visual properties to variables** — so if you wrap a column name in quotes, `ggplot2` treats it as a fixed label, not a reference to your data.
+
+That means your plot won’t behave as expected: instead of drawing one line per category, `ggplot2` tries to connect all the points into a single line — resulting in a wonky zig-zag.
+
+# Mayday, We Have a Problem!
+
+Someone tried to create a scatterplot showing the relationship between temperature and ozone concentration in the `airquality` dataset.
+
+They also wanted to explore how wind might affect these variables. But their code has a fundamental issue.
+
+-   Can you figure out **why the code doesn't make sense?**
+-   How could you **represent wind as a third dimension instead?**
+
+```{r}
+# This won't work because Wind is a numeric variable and the shape aesthetic requires categories
+# ggplot(airquality, aes(x = Temp, y = Ozone)) + geom_point(aes(shape = Wind))
+
+# Mapping wind to color and shape will work for numeric aesthetic
+ggplot(airquality, aes(x = Temp, y = Ozone)) + geom_point(aes(color = Wind, size = Wind))
+```
+
+`ggplot2` lets you **map variables to visual properties** rather than choosing a fixed chart type.
+
+That’s powerful — but it means you need to **be mindful of the data type each aesthetic expects**. Mapping a numeric variable to an aesthetic that requires categories (like `shape`) doesn’t make sense!
+
+# Category Confusion
+
+This code just works fine, the resulting scatterplot encodes different vehicle classes. But wait... Something is missing!
+
+**Take a moment to think about what is the issue and why it happens. How could you fix it?**
+
+Hint: You may want to use a different encoding to avoid some data to disappear from your plot...
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(shape = class))
+
+# Using color instead of shape to encode `class` variable since there are 7 discrete categories
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class))
+
+```
+
+It is important to carefully inspect your visualization to ensure the data is accurately represented and matches your expectations.
+
+There is only a limited number of default shapes that `ggplot2` uses — thus, there is a risk that some categories are encoded with no shapes at all!
+
+And a more general note on encoding categories: Colors are easier to distinguish than shapes. Nevertheless, many experts suggest to **limit the number of categories** to 3, 5, 6, or 8 (depending on whom you ask).
+
+# Lost for Words
+
+We're trying to create a scatterplot of engine size vs. fuel economy using the `mpg` dataset, with text labels showing the car manufacturer.
+
+We can **use geom_text() to add *labels*** — but something’s not working. Can you figure out what’s missing?
+
+Tip: Use our **Aesthetics Explorer** in the fundamental lesson on aesthetics if you need help.
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  # add the mandatory label mapping
+  geom_text(aes(label = manufacturer))
+```
+
+Some geometries **require specific aesthetics to work correctly**. If you try to use them without those required aesthetics, you'll run into errors or unexpected behavior.
+
+It makes sense — how can you draw some text if you don’t specify *what* the text should be? 🤦‍♂️
+
+In the next lesson, we’ll give you a full list of geometric layers along with their required aesthetics!
