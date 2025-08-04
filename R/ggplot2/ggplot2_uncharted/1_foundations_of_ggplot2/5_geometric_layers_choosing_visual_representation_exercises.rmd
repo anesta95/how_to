@@ -1,0 +1,182 @@
+# The Great Bar-Off
+
+But bar charts in ggplot2 can be created in **two different ways**.
+
+-   [`geom_bar()`](https://ggplot2.tidyverse.org/reference/geom_bar.html) draws rectangular bars with heights proportional to the values they represent. `geom_bar()` requires only one categorical column — it counts the occurrences of each category and displays them as bars.
+-   [`geom_col()`](https://ggplot2.tidyverse.org/reference/geom_col.html) uses the *actual values* in the data rather than counting occurrences. It requires `x` and `y` aesthetics to define the bars.
+
+Knowing **which layer fits your data best** is key, or vice versa, **how to shape your data** to match the layer.
+
+As some types of plots can be created in multiple ways, it’s worth **consulting the documentation** to see if there’s a more suitable layer for your case.
+
+And sometimes, you might not even need a different layer — it’s just a matter of changing one function argument or the shape of your data.
+
+# When Dots Collide
+
+You received flight data with information on departure delays and arrival delays. To explore patterns between the two variables and whether one predicts the other, someone plotted it as a scatter plot. Let’s just say... it didn’t help much. All dots, no insight.
+
+Your task: Replace the points with a geom that shows where flights tend to cluster to make patterns more readable.
+
+Overplotting makes it hard to see patterns — especially when many points fall in the same region.
+
+By summarizing the data into a **binned scatter plot**, we encode the number of observations within predefined areas, forming regular bins. This technique is well suited to reveal neighborhood relationships.
+
+It’s a great approach for large datasets, helping visualize continuous variables as **density maps**.
+
+```{r}
+library(ggplot2)
+library(hexbin)
+
+set.seed(42)
+
+flight_data <- data.frame(
+  dep_delay = c(rbeta(7000, 2, 10)*150, rbeta(3000, 6, 12)*120),
+  arr_delay = c(rbeta(7000, 3, 6)*150, rbeta(3000, 15, 3)*120)
+)
+
+# Scatter plot
+ggplot(flight_data, aes(x = dep_delay, y = arr_delay)) +
+  geom_point(alpha = 0.3, size = 1.5)
+
+# 2D Density plot
+ggplot(flight_data, aes(x = dep_delay, y = arr_delay)) +
+  geom_density_2d(alpha = 0.3, linewidth = 1.5)
+
+# Or 2D Bin plot
+ggplot(flight_data, aes(x = dep_delay, y = arr_delay)) +
+  geom_bin_2d(bins = 25)
+  # or use the bindwidth argument:
+  # geom_bin_2d(binwidth = c(5, 5))
+
+# or: 
+# ggplot(flight_data, aes(x = dep_delay, y = arr_delay)) +
+#   geom_hex(bins = 25)
+
+```
+# Scooping Layers Right
+Thanks to your help, the new analyst at "Ben & Queries" survived their trial period — and even managed to make the chart more aesthetically pleasing.
+
+But it’s not perfect yet... Can you spot the pain point?
+
+Once again, help and *fix the problem*. No need to write any new code — you just have to swap the order of the lines.
+
+```{r}
+df <- data.frame(
+  year = rep(2016:2024, times = 2),
+  rating = c(8.2, 8.5, 7.9, 8.1, 8, 8.4, 8.2, 8.1, 8.5,
+             7.1, 6.4, 9.8, 4.3, 7.3, 5.9, 7.1, 8.7, 9.3),
+  flavor_type = rep(c("Classic Vanilla", "Special Flavor of the Year"), each = 9)
+)
+
+ggplot(df, aes(x = year, y = rating)) +
+  geom_point(
+    aes(fill = flavor_type),
+    size = 5, shape = 21,
+    color = "white", stroke = 1.5
+  ) +
+  geom_line(
+    aes(group = flavor_type),
+    color = "gray60", linewidth = 1
+  ) +
+  labs(
+    title = "Ben & Queries Flavor Trends: Calm Vanilla, Wild Specials",
+    x = NULL, y = "Rating", fill = "Flavor:"
+  ) +
+  theme_minimal()
+
+# Swap the layering order so the points are on **top** of the line
+ggplot(df, aes(x = year, y = rating)) +
+  geom_line(
+    aes(group = flavor_type),
+    color = "gray60", linewidth = 1
+  ) +
+    geom_point(
+    aes(fill = flavor_type),
+    size = 5, shape = 21,
+    color = "white", stroke = 1.5
+  ) +
+  labs(
+    title = "Ben & Queries Flavor Trends: Calm Vanilla, Wild Specials",
+    x = NULL, y = "Rating", fill = "Flavor:"
+  ) +
+  theme_minimal()
+```
+The **order of layers** controls how your plot is rendered — each layer appears on top of the previous ones. If layers are stacked carelessly, **important details may get hidden**, and overlapping elements **can create unwanted effects** like color blending or misleading visual cues. A thoughtful order contributes to **a cleaner, more visually appealing result** and ensures key elements stand out.
+
+# 100% Delicious
+
+The analyst at "Ben & Queries" just received an updated dataset — how exciting!
+
+It shows the number of scoops (in 100,000) sold per flavor over the last few years. Now, they want to **visualize how the relative flavor shares** evolved — but fail to calculate the percentages correctly.
+
+Can you help them fix the chart? Actually, there’s a much easier solution than calculating the percentages yourself…
+
+```{r}
+df <- data.frame(
+  year = rep(factor(2018:2024), times = 5),
+  scoops = c(180, 190, 160, 175, 200, 210, 195, 70,  75,  60,  65,  70,  78,  73, 40,  50,  45,  48,  60,  66,  58, 120, 140, 130, 185, 160, 175, 230, 80,  95,  85,  88, 110, 120, 105),
+  flavor = rep(c("Classic Vanilla", "Chocolate", "Mango Sorbet", "Special Flavor", "Strawberry"), each = 7)
+)
+
+ggplot(df, aes(x = factor(year), y = scoops)) +
+  geom_col(
+    aes(fill = flavor)
+  ) +
+  labs(
+    title = "100% Delicious: Ben & Queries' Flavor Mix Over Time",
+    x = NULL, y = "Number of Scoops (in 100,000)", fill = "Flavor"
+  ) +
+  theme_minimal()
+
+# Doing relative proportions with position = "fill"
+ggplot(df, aes(x = factor(year), y = scoops)) +
+  geom_col(
+    aes(fill = flavor),
+    position = "fill"
+  ) +
+  labs(
+    title = "100% Delicious: Ben & Queries' Flavor Mix Over Time",
+    x = NULL, y = "Proportion", fill = "Flavor"
+  ) +
+  theme_minimal()
+
+```
+Stacked bar charts show absolute values by default. However, sometimes the main interest lies in the **relative proportions** across categories — what we often call a "part-to-whole" visualization.
+
+Knowing how to adjust chart behavior by overriding the `position` defaults saves you time and gives you full flexibility when creating charts with `ggplot2`.
+
+# Rainbow Flavor?!
+Fresh off their discovery of the position argument, your friend at Ben & Queries is eager to apply it to everything! “Wow, you can group bars that easily?” they thought...
+
+But things didn’t quite go as planned. First, they added a fill mapping to group bars by year — which was necessary to show multiple bars per flavor, but let’s just say… the color choice turned the chart into a rainbow puddle
+
+Then they tried tweaking the width arguments (inside and outside the position function) to adjust the spacing between bars — but that just squashed everything into a colorful mess
+
+Help your friend polish the chart: **remove the coloring and add proper spacing between the bars** — between and within flavor groups.
+They’re actually quite close, they just need a gentle nudge in the right direction!
+
+```{r}
+df <- data.frame(
+  year = rep(factor(2018:2024), times = 5),
+  scoops = c(180, 190, 160, 175, 200, 210, 195, 70,  75,  60,  65,  70,  78,  73, 40,  50,  45,  48,  60,  66,  58, 120, 140, 130, 185, 160, 175, 230, 80,  95,  85,  88, 110, 120, 105),
+  flavor = rep(c("Classic Vanilla", "Chocolate", "Mango Sorbet", "Special Flavor", "Strawberry"), each = 7)
+)
+
+ggplot(df, aes(x = flavor, y = scoops)) +
+  geom_col(
+    position = position_dodge2(padding = 0.2), # This can be used to set the padding between bars _within_ the group
+    width = 0.7 # Decrease the bar width to make them fit
+  ) +
+  # or:
+  # geom_col(
+  #   aes(group = year), # Use the `group` argument here to maintain the groupings but remove the categorical mapping to a color
+  #   position = position_dodge(width = 0.8), # Increase the dodge position
+  #   width = 0.7 # Decrease the width
+  #  ) +
+  labs(
+    title = "Ben & Queries Scoop Sales 2018–2024: Grouped by Flavor, Served by Year",
+    x = NULL, y = "Number of Scoops (in 100,000)"
+  ) +
+  theme_minimal()
+```
+
