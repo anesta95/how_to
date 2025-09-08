@@ -1,0 +1,209 @@
+# Just a Matter of Perspective
+
+So far, you’ve worked with a bunch of `geom_*()` functions — each one building a visual layer using some **data**, a set of **aesthetic mappings**, and a specification of the **position**.
+
+*But there’s one important argument we haven’t talked about yet.*
+
+Every geom also performs a statistical transformation — and the stat argument determines which one. Most of the time, it uses a default silently in the background. But that transformation is always there.
+
+And, as usual, we can override the default if we want the `geom_*` function to behave differently.
+
+By default, `geom_point()` draws one point for all observations that contain a value for `class` and `hwy` — no transformation is applied.
+
+```{r}
+library(ggplot2)
+
+# Default stat
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_point(
+    alpha = .3, size = 3,
+    # default: draw data as it is
+    stat = "identity"
+  )
+
+```
+
+We can override the default behavior to calculate a `summary` and draw one point that shows the mean `hwy` for each `class` instead.
+
+```{r}
+# Custom stat
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  geom_point(
+    size = 5,
+    # custom: first calculate summary (mean by default)
+    stat = "summary"
+  )
+```
+
+Instead of changing the `stat` argument in `geom_*()` functions, you can also flip your perspective and start from the transformation itself.
+
+That’s where `stat_*()` functions come in: they do the same work, but from the other direction.
+
+Instead of focusing on *how to draw the data*: "I want to plot bars."
+
+You're now focusing on *how to transform the data* before drawing: "I want to show my data as counts."
+
+As you've already learned, `geom_bar()` calculates the number of observations for each group — because the default stat is "count".
+
+```{r}
+# geom_bar
+ggplot(mpg, aes(y = class)) +
+  geom_bar(
+    # default transformation:
+    # calculate counts per group
+    stat = "count"
+  )
+```
+
+`stat_count()` produces the exact same plot — because the default `geom` is `"bar"`. Set the `geom` to *`point`* to explore how it works.
+
+```{r}
+# stat_count
+
+ggplot(mpg, aes(y = class)) +
+  stat_count(
+    # default geometry:
+    # draw a bar per group
+    geom = "point",
+    # these arguments are ignored until
+    # you change the geom to point
+    shape = "🚗",
+    size = 10
+  )
+```
+
+# The Constructor
+
+Technically, both approaches do the same thing: they create a *layer*.
+
+And indeed, under the hood both call the same function. They are just (very) convenient wrappers calling the `layer` function:
+
+**`layer(geom, stat, data, mapping, position, ...)`**
+The `geom_*()` and `stat_*()` functions simply have either a fixed `geom` or `stat` argument, respectively.
+
+`geom_*(stat, data, mapping, position, ...)`
+`stat_*(geom, data, mapping, position, ...)`
+
+Each wrapper includes defaults for `geom` or `stat` — along with a few other arguments — but you can change them if needed, as you’ve seen above.
+
+Ultimately, it’s about perspective: `geom_*()` and `stat_*()` are just two sides of the same coin. You’ll likely mostly work with geoms, since they map more directly to visual output. But when you explicitly want to control what happens _before_ drawing — to transform, summarize, or smooth your data — `stat_*()` layers give you that extra bit of precision.
+
+# Smart Summary Stats
+
+Want to show averages, error bars, or other summaries? `stat_summary()` helps you **calculate values** on the fly and **choose how to draw them**.
+Here’s the default behavior — just one line of code:
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) + stat_summary()
+```
+
+By default, `stat_summary()` calculates the mean and its standard error, 
+and uses a a point and a line to displays the three values for each group.
+
+The main arguments to know: 
+- `fun.data`: what to calculate — `mean_se` by default
+- `geom`: how to draw the result — `"pointrange"` by default
+Note: As we need to pass the function itself, not the returned values, it is specified without parentheses.
+
+_Can't I simply calculate the summary myself?_
+**Absolutely! Calculating summaries outside of `ggplot2` is a perfectly valid approach**, especially if you prefer to inspect and prepare your data manually before plotting or if you dont feel confident with using the `stat_*()` layers.
+
+However, using `stat_*` functions like `stat_count()`, `stat_summary()`, or `stat_summary_2d()` has some clear benefits:
+
+* No need for pre-calculation — enables flexible, on-the-fly summaries directly within your visualization code.
+* Always in sync with the raw data — reduces risk of mismatches or forgetting to update summaries when the data changes.
+* Allows specifying custom summary functions — simply not possible when using `geom_*` layers.
+
+In short: `stat_*` functions provide a streamlined, maintainable, and less error-prone workflow, making them a powerful tool to have in your toolbox.
+
+You want to indicate the mean on top of a boxplot? Add `stat_summary()` and change the `geom` to `"point"`.
+
+You can also customize the geometry as you'd do in a `geom_*` function — all the geom-specific arguments are available!
+
+In this case, `ymin` and `ymax` are calculated, but dropped — because `geom_point()` only needs a single value. You can also specify `fun = mean` explicitly.
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_boxplot() +
+  stat_summary(
+    geom = "point",
+    fun = mean,
+    size = 4,
+    shape = 23,
+    color = "#00978A",
+    fill = "#88EBDD",
+    stroke = 1.2
+  )
+```
+We can also access the calculated values by using `after_stat()`, for example to color (or, more precisely, `fill`) the points based on the mean:
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_hline(yintercept = 20, color = "gray60") +
+  geom_boxplot() +
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    size = 4,
+    shape = 23,
+    aes(fill = after_stat(y) > 20), # Creates logical vector on the fly to color values in each group below/above mean
+    stroke = 1.2
+  )
+```
+Alternatively to using the `fun.data` argument, which requires three summaries (a data frame with variables `ymin`, `y`, and `ymax`), you can also go the DIY route by specifying individual functions for each: 
+
+- `fun`: the center (e.g. mean or median)
+- `fun.min` and `fun.max`: define the range (e.g. mean ± sd)
+
+**`mean_sdl()` is a handy helper that draws mean ± SD intervals — but by default, it shows mean ± 2 × SD. To change that, we have to use the `fun.args` argument.**
+```{r}
+# Built-in functions
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  stat_summary(
+    fun.data = mean_sdl,
+    fun.args = list(mult = 1)
+  )
+```
+**Alternatively, you can pass your own functions — it's a bit more intimidating maybe, but actually not that difficult. This is how you calculate mean ± SD manually.**
+
+```{r}
+ggplot(mpg, aes(x = class , y = hwy)) +
+  stat_summary(
+    fun = mean,
+    fun.max = function(y) mean(y) + sd(y),
+    fun.min = function(y) mean(y) - sd(y)
+  )
+```
+You’re not limited to ranges or points — you can draw any geom you like.
+
+Let's draw some proper error bars with "caps" by combining a `pointrange` and `errorbar` geometry (in two separate `stat_summary()` calls).
+
+But not enough! To be more descriptive, we add another summary layer to enrich the chart with labels showing the average highway miles for each vehicle class 🔥
+
+To access these values, we once again use `after_stat()`, this time in combination with `round()` to shorten those long decimal values to a single digit.
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) +
+  stat_summary(
+    geom = "errorbar",
+    fun.max = function(y) mean(y) + sd(y),
+    fun.min = function(y) mean(y) - sd(y),
+    width = .3
+  ) +
+  stat_summary(
+    geom = "point",
+    fun = mean,
+    size = 2
+  ) +
+  stat_summary(
+    geom = "text",
+    fun = mean,
+    aes(label = after_stat(round(y, 1))),
+    hjust = -0.3
+  )
+```
+With `stat_summary()`, you decide what to show — and how precise, custom, or stylish it should be.
+
+Of course, `stat_summary()` is just one of many statistical layers. We won’t explore them all here — but a few will pop up in the exercises, and others might sneak into later lessons when you least expect them.
+
+

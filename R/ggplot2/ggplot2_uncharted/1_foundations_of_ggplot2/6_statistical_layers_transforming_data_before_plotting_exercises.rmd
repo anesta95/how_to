@@ -1,0 +1,166 @@
+# Boxplot Boost
+
+The sandbox below gives you a classic boxplot — a masterpiece of summary statistics. But we can still enrich it!
+
+Use `stat_summary()` to add the **mean as a red circle.**
+
+Bonus: try plotting the minimum and maximum values too. Use a different color or shape so they stand out.
+
+```{r}
+library(ggplot2)
+
+ggplot(mpg, aes(x = class, y = hwy)) +
+  geom_boxplot() +
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    color = "red",
+    shape = 1,
+    size = 4,
+    stroke = 2
+  ) +
+  stat_summary(
+    fun = min,
+    geom = "point",
+    color = "#00978A",
+    size = 2,
+    shape = 3, # triangle
+    stroke = 1.2
+  ) +
+  stat_summary(
+    fun = max,
+    geom = "point",
+    color = "#00978A",
+    size = 2,
+    shape = 15, # square
+    stroke = 1.2
+  )
+```
+
+# Identity Crisis
+
+As you learned in the previous lesson, there are two geom layers to draw bar charts in `ggplot2`: `geom_bar()` and `geom_col()`.
+
+Remember the difference? One **computes bar heights** from counts, while the other **uses the values you provide** for bar height.
+
+But in the early days of `ggplot2`, there was no `geom_col()` (it was only added in November 2016). If your data was already summarized, you had to tweak the default behavior.
+
+Let’s bring back some early `ggplot2` vibes: try to **make `geom_bar()` work with our daily coffee counts**. There’s only *one setting* you need to change to make it behave just like `geom_col()`.
+
+```{r}
+coffee_counter <- data.frame(
+  wday = 1:7,
+  cups = c(3, 4, 5, 4, 6, 1, 2)
+)
+
+ggplot(coffee_counter, aes(x = wday, y = cups)) +
+  geom_bar(stat = "identity")
+```
+
+In `ggplot2`, most geoms have a default stat — and vice versa. Changing the `stat` argument lets you *customize behavior* without switching functions.
+
+Learning to adjust `stat` gives you more flexibility, lets you write more intentional visualizations — and helps you understand legacy code.
+
+# Unpacking the Smooth
+
+By default, both `stat_smooth()` and `geom_smooth()` draw a smooth curve plus a ribbon — and they look and feel identically as using the same default combination of `stat` and `geom` — both named `"smooth"`. But **how do they actually estimate these curves?**
+
+Apply the one that allows you to swap the geometry to a `"pointrange"` and reveal the **estimated values** that the usual smoothed line and ribbon are built from.
+
+Optionally add the original line and ribbon on top for comparison.
+
+```{r}
+ggplot(airquality, aes(x = Ozone, y = Solar.R)) +
+  geom_point(alpha = 0.2) +
+  # we need to use stat_smooth() to
+  # change the geom — that of
+  # geom_smooth() can't be modified!
+  stat_smooth(
+    geom = "pointrange"
+  ) +
+  # add the original smoothing with 
+  # geom_smooth() or stat_smooth
+  geom_smooth(
+    color = "red",
+    linewidth = 0.3
+  )
+```
+
+Knowing how to approach layers when you want to change the geometry or the stat is key to make full use of the flexibility.
+
+***Often, you can go both routes: You can pick a `geom_*` function and change the statistical transformation, or use a `stat_*` and overwrite the default geometry.***
+
+# A Mean Treat!
+The analyst at Ben & Queries is testing a new flavor of charts. It shows individual scoops sold per flavor as a *dot strip* — but wouldn't it be great to _highlight the average_ number of scoops for each flavor as well?
+
+As they've never heard of statistical transformations, they could need some help!
+
+**Add the mean as a big cross** — one per flavor, using the same color as the corresponding dots.
+
+Tip: Use shape = 4 to create a cross symbol. Alternatively, passing letter or symbols such as "×" works, too — but you can't change its stroke.
+
+```{r}
+df <- data.frame(
+  year = rep(factor(2018:2024), times = 5),
+  scoops = c(180, 190, 160, 175, 200, 210, 195, 70,  75,  60,  65,  70,  78,  73, 40,  50,  45,  48,  60,  66,  58, 120, 140, 130, 185, 160, 175, 230, 80,  95,  85,  88, 110, 120, 105),
+  flavor = rep(c("Classic Vanilla", "Chocolate", "Mango Sorbet", "Special Flavor", "Strawberry"), each = 7)
+)
+
+ggplot(df, aes(x = flavor, y = scoops)) +
+  geom_point(
+    aes(fill = flavor),
+    shape = 21, size = 3, alpha = 0.5
+  ) +
+  stat_summary(
+    aes(color = flavor),
+    geom = "point",
+    fun = mean,
+    size = 6,
+    stroke = 4,
+    shape = 4
+  ) +
+  theme_minimal() +
+  # this removes all legends
+  theme(legend.position = "none")
+```
+`stat_summary()` is a powerful tool to quickly add indicators for summary metrics — without the need to calculate the data frame beforehand!
+
+When in doubt about which arguments you can use to map aesthetics or change the visual appearance, check the help for the respective `geom_*` function!
+
+# Heatmap Mishap
+You’re working with exam results from different subjects. For each test, you know how many students received a certain grade — and multiple tests were conducted per subject.
+
+But when applying `geom_tile()` — which seems like a perfect fit for grids — the heatmap looks incorrect. Notice something strange about the legend? Shouldn't we expect higher numbers here?
+
+Indeed, because `geom_tile()` uses `stat = "identity"` by default, it stacks multiple tiles on top of each other!
+
+Create a **meaningful heatmap** showing how many students received each grade per subject.
+
+Hint: `stat_summary_2d()` lets you create two-dimensional summaries, mapping **averages** to the fill color by default. To plot total counts per combination, **overwrite the default summary function** and use the `z` aesthetic to specify which column to summarize.
+
+```{r}
+set.seed(42)
+df <- data.frame(
+  subject = sample(c("Math", "Science", "History", "English"), size = 60, replace = TRUE),
+  grade = sample(c("A", "B", "C", "D"), size = 60, replace = TRUE),
+  n = sample(1:10, size = 60, replace = TRUE)  # students in each exam
+)
+
+ggplot(df, aes(x = grade, y = subject, z = n)) +
+  stat_summary_2d(
+    fun = sum,
+    color = "white",
+    linewidth = 0.6
+  )
+```
+`stat_summary_2d()` comes in handy when you need to **aggregate and visualize values across two dimensions**. It calculates a summary statistic — like the mean or sum — and displays it as a heatmap.
+
+And a more general, but very important lesson: it’s always good practice to _inspect your visualizations critically_. Overlapping tiles, unexpected scales, or grouping mistakes can lead to misleading plots!
+
+
+
+
+
+
+
+

@@ -1,0 +1,344 @@
+# Defining Data Placement
+
+So far, you’ve used aesthetics and layers to shape your charts, with data **placed based on the values mapped to `x` and `y` aesthetics** — either specified explicitly or partly returned by ggplot2.
+
+Without much thought, all your charts were built using a _Cartesian coordinate system_  — a familiar grid of linear horizontal and vertical axes. By default, these axes have also been **untransformed**, meaning each tick mark always represented the same interval of change.
+
+```{r}
+library(ggplot2)
+
+ggplot(msleep, aes(x = sleep_rem, y = sleep_total)) +
+  geom_point() +
+  # the invisible default
+  coord_cartesian()
+```
+
+But `ggplot2` provides a range of coordinate systems that go far beyond this default. Whether you want to flip coordinates, fix aspect ratios, apply transformations, or project data into circular or spatial space, the coordinate system plays a key role.
+
+Some coordinate systems keep shapes intact but adjust orientation or scaling. Others reshape your entire grid — to turn bars into wedges, to display log transformations, or to control how spatial data is projected into a 2-dimensional space.
+
+# Coordinate Systems at a Glance
+
+Coordinate systems in `ggplot2` determine how your data's x and y values are translated into positions on the plot. Understanding them is key to creating more advanced and specialized visualizations.
+
+## Linear Coordinates
+
+These systems maintain the direct, proportional mapping of data values to visual positions, preserving the original geometric shapes and relationships.
+
+* `coord_cartesian()`: is the default system showing data relationships along linear axes that adjust to the available space.
+* `coord_fixed()`: locks the aspect ratios, ensuring that a unit on the x-axis represents the same physical distance (or a multiple of it) on the y-axis.
+* `coord_flip()`: swaps x and y axes for easier horizontal layouts (however, in many layers you can simply switch x and y nowadays).
+
+### Cartesian Example
+```{r}
+boxes <- data.frame(
+  xmin = c(4, 3), xmax = c(6, 4),
+  ymin = c(2, 4), ymax = c(4, 5)
+)
+
+ggplot(boxes) +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax,
+        ymin = ymin, ymax = ymax),
+    fill = c("#663e8e", "#d13760") # note: we set multiple colors directly to avoid a legend here
+  ) +
+  annotate(geom = "segment", x = 6, xend = 3, y = 2, yend = 5) +
+  coord_cartesian()
+```
+### Fixed Example
+```{r}
+ggplot(boxes) +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax,
+        ymin = ymin, ymax = ymax),
+    fill = c("#663e8e", "#d13760") # note: we set multiple colors directly to avoid a legend here
+  ) +
+  annotate(geom = "segment", x = 6, xend = 3, y = 2, yend = 5) +
+  coord_fixed()
+```
+### Flipped Example
+```{r}
+ggplot(boxes) +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax,
+        ymin = ymin, ymax = ymax),
+    fill = c("#663e8e", "#d13760") # note: we set colors directly to avoid an automatic legend
+  ) +
+  annotate(geom = "segment", x = 6, xend = 3, y = 2, yend = 5) +
+  coord_flip()
+```
+## Non-linear Coordinates
+
+These systems transform the data's geometry by applying transformations that alter shapes, angles, or distances. They are essential for specialized plots like pie charts or maps.
+
+* `coord_radial()` and `coord_polar()`: transform Cartesian coordinates into a circular space. They allow for mapping of positional aesthetics to either angle or radius, enabling plots like pie, donut, or radial bar charts.
+* `coord_trrans()`: applies specific transformations like log, square root, or more custom logic directly to the coordinate system axes — _after_ the statistical transformations has been applied.
+* `coord_sf()` and `coord_map()`: project spatial data onto maps, accounting for the Earth's curvature and resulting in realistic distortions. `coord_sf()` is the modern and recommended approach for spatial data.
+
+## Radial Example
+
+```{r}
+ggplot(data = boxes) +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax,
+        ymin = ymin, ymax = ymax),
+    fill = c("#663e8e", "#d13760")
+  ) +
+  annotate(geom = "segment", x = 6, xend = 3, y = 2, yend = 5) +
+  coord_radial()
+```
+## Polar Example
+```{r}
+ggplot(data = boxes) +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax,
+        ymin = ymin, ymax = ymax),
+    fill = c("#663e8e", "#d13760")
+  ) +
+  annotate(geom = "segment", x = 6, xend = 3, y = 2, yend = 5) +
+  coord_polar()
+```
+## Trans Example
+```{r}
+
+ggplot(data = boxes) +
+  geom_rect(
+    aes(xmin = xmin, xmax = xmax,
+        ymin = ymin, ymax = ymax),
+    fill = c("#663e8e", "#d13760")
+  ) +
+  annotate(geom = "segment", x = 6, xend = 3, y = 2, yend = 5) +
+  coord_trans(
+    x = "log10",
+    y = scales::transform_boxcox(p = 10)
+  )
+```
+While maps are technically just another coordinate system, they come with their own set of challenges — from working with spatial data formats to choosing appropriate projections and styling.
+
+That’s why we’ll explore them in dedicated lessons later on, where we’ll walk you through the full process step by step.
+
+# System Settings
+There’s a handful of arguments that most `coord_*` functions share that help you fine-tune their behavior.
+
+They’re small tweaks — but mighty little helpers in shaping your plot:
+
+* `xlim` and `ylim` — zoom into a specific region
+* `clip` — allow elements to spill outside the panel
+* `expand` — remove the default padding around your data
+
+To demonstrate that `coord_*` functions actually zoom in, we’ll craft a simple boxplot with deliberately silly y limits. Plus, we’ll set `clip` to `"off"` so elements that usually get cut off remain visible — showing that the full boxplot is still there, just partly out of view.
+
+```{r}
+ggplot(msleep, aes(x = vore, y = sleep_rem)) +
+  geom_boxplot(fill = "#f8c663") +
+  coord_cartesian(
+    ylim = c(1, 3),
+    clip = "off",
+    expand = FALSE
+  ) +
+  ggtitle('
+1) Use ylim to zoom in without dropping data.
+2) Set clip = "off" to show geometries beyond the panel.
+3) Turn off padding along axes with expand = FALSE.
+  ')
+
+ggplot(msleep, aes(x = vore, y = sleep_rem)) +
+  geom_boxplot(fill = "#f8c663") +
+  coord_cartesian(
+    ylim = c(1, NA), # using the max y value as a coordinate limit
+    clip = "off",
+    expand = FALSE
+  ) +
+  ggtitle('
+1) Use ylim to zoom in without dropping data.
+2) Set clip = "off" to show geometries beyond the panel.
+3) Turn off padding along axes with expand = FALSE.
+  ')
+```
+By the way: You can also set just the `y` or `x` lower or upper limit and specify the other limit in the provided integer vector as `NA` to use the data’s minimum or maximum, respectively. Give it a try in the example above!
+
+### Two ways to set limits — but different results!
+You can restrict what’s visible on your plot using either __`coord_*` or the positional `scale_*`__ functions. Both accept limits — but ***they behave very differently***:
+
+* Coordinate limits zoom in _after_ everything is drawn: The data and geoms are still there — but if the limits cut into the value range, some elements may get cropped or drawn beyond the panel.
+
+* Scale limits filter data _before_ plotting: If those limits fall within the data range, fewer rows reach the plot — which can remove points or alter summaries like boxplots and error bars. We’ll dive deeper into this important distinction and the logic behind `scale_*` functions in the upcoming dedicated lesson on scales.
+
+Take-home message: _be careful when setting limits manually_, especially with `scale_*` — and if you do, it’s usually best to make sure they adjust automatically when your data changes.
+
+Let’s now turn to coordinate systems that _transform_ the linear projection. The remaining linear options `coord_fixed()` and `coord_flip()` are straightforward to use — and you’ll get to explore them in more detail through the upcoming exercises.
+
+# Transforming the Grid
+As introduced, non-linear coordinate systems _reshape the entire canvas_. They transform one or both axes to project your data into circular, geographic, or other custom layouts — offering completely new perspectives.
+
+## Circular Perspectives
+Both `coord_polar()` and the newer `coord_radial()` reshape rectangular plots into circular layouts — perfect for pie charts, coxcomb plots, or circular bar charts. But they differ in how cleanly and flexibly they handle those transformations.
+
+`coord_polar()` is the classic option: it transforms one axis into angles and the other into radius. It's long been used for polar charts, but can feel clunky — especially with guides or partial-circle plots.
+
+### `coord_polar()` Pie Example
+```{r}
+flavors <- c("Vanilla", "Chocolate", "Strawberry", "Mango")
+
+df <- data.frame(
+  flavor = factor(flavors, levels = flavors),
+  scoops = c(40, 30, 20, 10)
+)
+
+ggplot(df, aes(x = "", y = scoops, fill = flavor)) + # we need to map *something* to x (but it doesn't matter what)
+  geom_col(width = 1) +
+  coord_polar(
+    theta = "y", 
+    direction = -1
+  )
+```
+### `coord_polar()` Coxcomb Example
+```{r}
+ggplot(df, aes(x = flavor, y = sqrt(scoops), fill = flavor)) +
+  geom_col(width = 1) +
+  coord_polar(
+    theta = "x"
+  )
+```
+# `coord_polar()` Radial Bars Example
+```{r}
+ggplot(df, aes(x = rev(flavor), y = scoops)) + 
+  geom_col() +
+  coord_polar(
+    theta = "y"
+  ) +
+  # we need to adjust the padding around both axes 
+  # (positional scales) to make it work
+  scale_x_discrete(expand = expansion(add = c(1, 0))) +
+  scale_y_continuous(expand = expansion(add = c(0, 5)))
+```
+`coord_radial()`, added in 2024, is a more modern take. 
+It allows cleaner handling of labels, supports arcs that don’t cover a full circle, and avoids odd artifacts near the center. It also plays more nicely with the newer guide system — making it easier to style and annotate circular plots.
+
+### `coord_radial()` Pie Example
+```{r}
+ggplot(df, aes(x = scoops, y = "", fill = flavor)) + # we need to map *something* to y (but it doesn't matter what)
+  geom_col(width = 1) +
+  coord_radial(
+    expand = FALSE, 
+    direction = -1
+  )
+```
+### `coord_radial()` Coxcomb Example
+```{r}
+ggplot(df, aes(x = flavor, y = sqrt(scoops), fill = flavor)) +
+  geom_col(width = 1) +
+  coord_radial(
+    expand = FALSE
+  )
+```
+### `coord_radial()` Radial Bars Example
+```{r}
+df_rev <- data.frame(
+  flavor = factor(flavors, levels = rev(flavors)), # rev() to go from smallest to greatest
+  scoops = c(40, 30, 20, 10)
+)
+
+ggplot(df_rev, aes(x = flavor, y = scoops)) + 
+  geom_col() +
+  coord_radial(
+    theta = "y", 
+    r_axis_inside = TRUE
+  ) +
+  # we need to adjust the padding on the y axis for 
+  # good-looking labels close to the bars
+  scale_y_continuous(expand = expansion(add = c(0, 5)))
+```
+The new radial coordinate system makes it much easier to add the labels inside the panel (as in the radial bars example above).
+
+It's also much simpler to create __partial polar charts__ — for example to create gauge or parliament plots — or to **adjust the inner radius** — for example, to turn a pie chart into a donut.
+
+### `coord_radial()` Gauge Plot Example
+```{r}
+value <- 7.3
+
+ggplot() +
+  # Add gap to bottom
+  coord_radial(
+    start = 4/3 * pi,  # 240°
+    end = 2/3 * pi,    # 120°
+    expand = FALSE
+  ) +
+  # Draw areas
+  annotate(
+    geom = "rect", 
+    xmin = c(-Inf, 3, 5), xmax = c(3, 5, Inf),
+    ymin = .6, ymax = 1,
+    fill = c("#FF6D5C", "#DFAD43", "#45B4A7")
+  ) +
+  # Draw ticks
+  annotate(
+    geom = "segment", 
+    x = 0:10, xend = 0:10, 
+    y = .6, yend = 1,
+    linewidth = 1, color = "white"
+  ) +
+  # Draw needle
+  annotate(
+    geom = "pointrange", 
+    x = value, y = 0,
+    ymin = 0, ymax = 1.05,
+    size = 2, linewidth = 1.3, lineend = "round"
+  ) +
+  # This part adds the tick labels (and removes everything else)
+  scale_x_continuous(breaks = 0:10) +
+  theme_void() +
+  theme(axis.text.x = element_text(size = 14))
+```
+### `coord_radial()` Donut Chart
+```{r}
+# Same code as above — just inner.radius is new
+ggplot(df, aes(x = scoops, y = "", fill = flavor)) +
+  geom_col(width = 1) +
+  coord_radial(
+    expand = FALSE,
+    inner.radius = 0.5
+  )
+```
+# Warning
+Circular layouts are striking and visually appealing, but they’re also linked to chart types that can be hard to read and sometimes misleading.
+
+The pie chart, for example, is often criticized— but is it always a bad choice? And why does it get so much hate? Let’s play a quick game to find out.
+
+# Stretch, Shrink, and Straighten 
+We’ve already seen that `coord_*` functions transform axes _after_ the layers and statistical summaries are computed. And we can make clever use of that!
+
+With `coord_trans()`, you’re not just changing how values are displayed — you're _warping the entire coordinate grid_. That means not only the layers but also axes and thus the grid lines reflect the transformed space. It’s perfect for technical or scientific plots where a _logarithmic or curved grid_ makes structure and scale crystal clear.
+
+This also affects how layers like `geom_smooth()` — or respectively `stat_smooth()` — behave: any smoothing or model fitting will occur in the transformed space. This is ideal if you want to emphasize **logarithmic trends or multiplicative patterns**.
+
+### Linear Spacing Example
+```{r}
+set.seed(123)
+x <- (1:10)*100
+dat <- data.frame(x = x, y = rnorm(100, 1000, 250) * x)
+
+ggplot(dat, aes(x = x, y = y)) +
+  stat_smooth(method = "lm") +
+  geom_point()
+```
+
+### Logarithmic Coord Example
+```{r}
+ggplot(dat, aes(x = x, y = y)) +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  # pass common options as strings 
+  coord_trans(y = "log10")
+  # or use tranformer functions from the scales package
+  # coord_trans(y = scales::transform_log10())
+```
+### Logarithmic Scale Example
+```{r}
+ggplot(dat, aes(x = x, y = y)) +
+  stat_smooth(method = "lm") +
+  geom_point() +
+  scale_y_log10()
+```
+
+You simply can’t get these effects with `scale_*` functions as they apply statistical transformations to the data before plotting the axes, grid, and geometries.
