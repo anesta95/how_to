@@ -1,0 +1,149 @@
+# Zoom Responsibly
+
+We have a line chart showing temperature data over time. 
+The full trend is interesting, but we want to focus on a specific period where there's a notable pattern.
+
+Use `coord_cartesian()` with `xlim` to zoom in on the period from day 15 to day 35.
+
+Hint: The xlim argument takes a vector with two values: the minimum and maximum.
+
+```{r}
+library(ggplot2)
+
+set.seed(123)
+temp_data <- data.frame(
+  day = 1:50,
+  temperature = 20 + 10 * sin(1:50 * 0.3) + rnorm(50, 0, 2)
+)
+
+ggplot(temp_data, aes(x = day, y = temperature)) +
+  geom_line(color = "#663e8e", linewidth = 1.2) +
+  geom_point(color = "#663e8e", size = 2) +
+  coord_cartesian(xlim = c(15, 35)) +
+  labs(
+    title = "Temperature Over Time",
+    x = "Day",
+    y = "Temperature (°C)"
+  )
+```
+Zooming on a specific section of the graph is a very common task in data analysis.
+Using xlim and ylim allows to do that for the X and Y axes respectively.
+
+# Taming Exponential Growth
+We have data from a bacterial culture experiment. The population grows exponentially over time, but the current plot makes it hard to see the early growth phase.
+
+Apply a log transform to the y-axis using `coord_trans()` to reveal the linear relationship in the growth pattern.
+
+Hint: Use `coord_trans(y = "log10")` to apply a base-10 logarithmic transformation to the y-axis.
+
+```{r}
+# Create bacterial population data with exponential growth
+set.seed(456)
+bacteria_data <- data.frame(
+  time = seq(0, 24, length.out = 80),  # 80 time points
+  population = pmax(round(100 * exp(0.3 * seq(0, 24, length.out = 80)) + abs(rnorm(80, 0, 200)), 1))
+)
+
+ggplot(bacteria_data, aes(x = time, y = population)) +
+  geom_point(color = "#d13760", size = 2, alpha = 0.7) +
+  coord_trans(y = "log10") +
+  labs(
+    title = "Bacterial Population Growth",
+    x = "Time (hours)",
+    y = "Population (cells)"
+  )
+```
+Log transforms are essential for visualizing data with exponential relationships. They can reveal patterns that are completely hidden in the original scale.
+
+When data grows exponentially, later values dominate the plot, making early trends invisible. A log transform "straightens out" exponential curves, making the underlying relationship much clearer.
+
+# Turning Bars Into Wedges
+
+We have a simple bar chart showing monthly sales data. The rectangular layout works well, but what if we wanted to make it more visually interesting?
+
+Transform this bar chart into a circular barplot using `coord_radial()`. If you like, add empty space in the center using `inner.radius` argument.
+
+Note: Of course, you could also use `coord_polar()` instead.
+
+Bonus Task: Check out the [circular barplot section](https://r-graph-gallery.com/circular-barplot.html) of the R Graph Gallery for more advanced techniques and customization options.
+
+```{r}
+# Monthly sales data
+sales_data <- data.frame(
+  month = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+  sales = c(120, 150, 180, 200, 220, 250, 280, 300, 270, 240, 200, 160)
+)
+
+ggplot(sales_data, aes(x = month, y = sales)) +
+  geom_col(fill = "#663e8e", alpha = 0.8) +
+  coord_radial(theta = "x", inner.radius = .2)
+  labs(
+    title = "Monthly Sales",
+    x = "Month",
+    y = "Sales ($1000s)"
+  )
+```
+# Flip It Like You Mean It
+
+You’re looking at a vertical summary chart of highway mileage (hwy) by vehicle class (class), with **mean values** labeled next to each point.
+
+Think about: _Why wouldn’t simply swapping `x` and `y` aesthetics work here?_ What would happen to the summary labels?
+
+Use a **`coord_*` function to switch the orientation of the plot — without changing** the mappings. Also make sure to adjust the label placement afterwards.
+
+(Yes, you could also manually adapt both, the aesthetics and summary layers — but `coord_flip()` is much quicker here!)
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) +
+  stat_summary() +
+  stat_summary(
+    fun = mean,
+    geom = "text",
+    mapping = aes(label = round(after_stat(y), 1)),
+    fontface = "bold",
+    size = 3.5,
+    vjust = -0.8 # Switch label justification direction
+  ) +
+  # switchc axes
+  coord_flip()
+```
+# Around the Clock
+We have simulated hourly traffic data across all weekdays. It’s visualized as a heatmap with `geom_tile()` — but we want to make the repeating patterns more intuitive by arranging it in a circular format.
+
+Apply **`coord_radial()` to turn this into a radial heatmap.** Start the day at the top (midnight) and leave a central hole by setting `inner.radius` to `0.3`.
+
+```{r}
+traffic <- data.frame(
+  hour = factor(rep(1:24, 7)),
+  day = factor(
+    rep(1:7, each = 24),
+    labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+  ),
+  value = c(0.2, 1.3, 1.4, 1, 5.9, 6.2, 7.8, 9.3, 12.4, 10.5, 5, 3.8, 3.5, 4.2, 3.3, 5.8, 7.8, 10.4, 10, 8.6, 0.8, 1.7, 0.7, 1.6, 1.3, 0.4, 1.9, 1.6, 5.3, 6.3, 8.2, 9.3, 12.2, 11, 3.8, 3.7, 4.7, 3.9, 4.1, 5.3, 8.3, 11, 10.5, 8.4, 2.7, 1.6, 1.7, 0.8, 2, 0.7, 0.9, 2.1, 5.8, 6.2, 7.8, 8.6, 12.1, 10.4, 3.2, 3.5, 3.5, 3.2, 3.2, 5.8, 8, 10.9, 10.3, 8, 0.8, 0.1, 1.3, 1.1, 1.2, 0.5, 1, 1.2, 5.4, 4.7, 7.6, 8.5, 11.6, 10.7, 4, 3.1, 4.1, 4.3, 4.2, 5.1, 8.5, 10.1, 10.6, 8.5, 2.4, 2.2, 0.7, 2.2, 2.6, 1.6, 1.8, 2.8, 5.6, 6.5, 7.7, 9.3, 12.1, 10.2, 4.5, 3.3, 4.7, 4.4, 6.5, 7.8, 9.4, 10.8, 8.2, 5.6, 2.4, 0.2, 2.8, 1.7, 0.4, 1.7, 1.6, 2.5, 2.1, 1.7, 3.2, 5.3, 8.3, 7.4, 8.3, 10.1, 8.5, 9.8, 8.8, 9.9, 11.8, 8, 6.9, 4.9, 1.3, 0.4, 2.7, 1.8, 2.2, 2.8, 1.6, 1.1, 0.2, 2.6, 3.2, 6.1, 7.7, 7.2, 9.7, 10.5, 11.3, 8.2, 9.1, 7.3, 6.8, 7.8, 5.2, 4.2, 2.9, 2.7, 0.6, 1.6)
+)
+
+ggplot(traffic, aes(x = hour, y = day, fill = value)) +
+  geom_tile() +
+  geom_hline(
+    yintercept = seq(.5, 6.5, by = 1),
+    color = "white", linewidth = 0.5
+  ) +
+  coord_radial(
+    # place midnight at the top
+    start = .15,
+    # add inner hole
+    inner.radius = 0.3,
+    expand = F
+    ) +
+  scale_fill_viridis_c(option = "C", name = "Traffic") +
+  theme_minimal() +
+  theme(legend.position = "top")
+```
+
+While circular layouts often get a bad rap — and for good reason! — radial plots can be a great way to **display time-related data, especially when it repeats in natural cycles** like hours or days.
+
+Unlike some radial charts that distort perception, the circular layout reinforces the cyclical structure of the data, making interpretation more intuitive.
+
+
+
