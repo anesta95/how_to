@@ -1,0 +1,278 @@
+# Map 'n' Shape
+
+When you specify an aesthetic like `x = wday` or `color = cyl`, you’re telling ggplot2 what variable to map to the respective aesthetic — and `ggplot2` encodes them accordingly.
+
+
+But what defines _how_ the values of that column are translated into visual properties? That’s where __scales__ come in.
+
+Each aesthetic (like `color`, `size`, or `x`) has a corresponding scale that controls how the data is visually represented.
+
+Together, _aesthetics_ and _scales_ form a two-part system:
+
+* `aes()` maps your data columns to visual properties.
+* `scale_*()` controls how those properties appear in the final plot.
+
+The names of scale functions (and there are a ton!) _always_ reference the respective **aesthetic** and often a _specific type_ of data or behavior:
+
+**scale_[aesthetic]_[type]()**
+
+Let's look at a few examples:
+- `scale_x_date()`: Controls how _date variables_ are represented along the _x-axis_.
+- `scale_y_continuous()`: Controls how _continuous (numeric) variables_ are displayed on the _y-axis_.
+- `scale_color_discrete()`: Controls the encoding of _discrete (categorical) variable_ are displayed on the _color aesthetic_.
+
+Based on the mapping you’ve specified, `ggplot2` applies appropriate default scales (if you don't specify them yourself) — behind the scenes, to make your plot work:
+
+```{r}
+library(ggplot2)
+
+ggplot(economics_long) + 
+  aes(x = date, y = value01, color = variable) +
+  geom_line() +
+  # the invisible defaults
+  scale_x_date() +
+  scale_y_continuous() +
+  scale_color_discrete()
+```
+# Controlling Scales
+If you want to tweak how a scale behaves, you can simply modify its settings — or replace it with the `scale_*()` function that fits your needs.
+
+Some common reasons to modify or replace a scale:
+- **Changing axis limits** — like filtering the data range or capping extreme values
+- **Switching color palettes** — like using custom colors for discrete groups or gradients for continuous data
+- **Styling axes and legends** — like adjusting tick marks, re-labeling categories, or modifying the legend’s appearance
+- **Transforming the data** — like applying a log scale on the y-axis or aggregating values into bins
+
+You don’t have to change the data to do any of this — it’s all handled by the `scale_*()` functions.
+
+Most `scale_*()` functions have share some general arguments:
+
+- **name**: set a custom axis or legend title
+- **breaks**: define steps to display along the axis or in the legend
+- **labels**: customize the value text on the axis or in a legend
+
+## Scale, axis, legend, guide — a quick primer on the terminology
+In ggplot2, both legends and axes are __visual representations of scales__ — they help viewers decode how visual properties like color, size, or position relate to underlying data values.
+
+**Technically, any visual representation of scales are referred to as guides.**
+
+Which type of guide you get depends on the aesthetic: when you map to x or y, the guide is an **axis**. For aesthetics like fill, color, or shape mapped to a discrete variable, it’s typically what ggplot2 calls a **legend** — in the case of continuous color and fill scales, we get a **colorbar**.
+
+While legend describes a visual guide with distinct keys in ggplot2, people (including us) often refer to all of them as **legends** — which is perfectly fine in most situations. But when you start customizing guides or reading documentation, this overlap in terminology can feel a bit confusing.
+
+Let’s begin with how to adjust _positional scales_ — that is, the scales behind the plot’s axes for _discrete_ and _continuous_ variables.
+
+Here are some common arguments specific to positional scales:
+
+* `limits`: set the value range of the data (see note of caution below)
+* `expand`: control the padding around the scale limits
+* `position`: move the axis to the "top" or "bottom", "left" or "right"
+* `transform`: apply a transformation to an axis (before plotting!)
+* `na.translate`: whether to include NA as a category for discrete scales
+* `sec.axis`: display a secondary axis for continuous scales
+
+### Positional Encodings
+#### Discrete
+```{r}
+ggplot(msleep, aes(x = vore, y = sleep_rem)) +
+  geom_boxplot() +
+  scale_x_discrete(
+    # change axis title
+    name = "Diet",
+    # overwrite labels on x-axis
+    labels = c("carni" = "Carnivore", "herbi" = "Herbivore", "insecti" = "Insectivore", "omni" = "Omnivore"),
+    # reorder categories
+    limits = c("herbi", "omni", "carni", "insecti"),
+    # remove unknown group
+    na.translate = FALSE,
+    # place on the top of the panel
+    position = "top"
+  )
+```
+
+#### Continuous
+```{r}
+ggplot(msleep, aes(x = vore, y = sleep_rem)) +
+  geom_boxplot() +
+  scale_y_continuous(
+    # change axis title
+    name = "Hours of REM sleep",
+    # adjust limits (may filter data!)
+    limits = c(NA, 3),
+    # control padding on bottom and top
+    expand = expansion(add = c(.2, .5)),
+    # set tick marks
+    breaks = c(0, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 3), # custom steps
+    # breaks = seq(0, 3, by = 0.5), # regular steps
+    # add an additional axis on the right
+    sec.axis = dup_axis()
+  )
+```
+***A note of caution when setting limits on continuous positional scales:*** 
+
+When you specify limits inside a `scale_*()` function — e.g. `scale_x_continuous(limits = c(NA, 3))` — these limits are applied __before__ the plot is drawn. This means they can directly filter the underlying data and affect the range of data values included.
+
+If you're using layers that perform statistical transformations (such as summaries, smoothers, or binning), they’ll operate on a __filtered version of the data__ if your limits exclude any values.
+
+If your goal is to **only visually zoom** into a portion of the plot without affecting the data behind the scenes, set the limits in a `coord_*()` function instead. We showcase, and stress, this important distinction in the lesson on coordinate systems as well.
+
+Now, let's turn to modifying scales for _visual aesthetics_ like `fill`, `shape`, and `size`.
+
+Below are some examples of how to customize these, again for the two most common types — **discrete** and **continuous** — and combining two different visual encodings in both cases:
+
+### Visual Encodings
+#### Discrete
+```{r}
+ggplot(msleep, aes(x = sleep_total, y = sleep_rem)) +
+  geom_point(aes(fill = vore, shape = vore), size = 4) +
+  scale_fill_discrete(
+    # change legend title
+    name = "Diet:",
+    # apply custom fill colors
+    type = c("#d13760", "#00978a", "#663e8e", "#c69612"),
+    # overwrite labels in legend
+    labels = c("carni" = "Carnivore", "herbi" = "Herbivore", "insecti" = "Insectivore", "omni" = "Omnivore")
+  ) +
+  # scale_shape() is the default but to set
+  # custom shapes, we need scale_shape_manual()
+  scale_shape_manual(
+    # change legend title
+    name = "Diet:",
+    # apply custom shapes
+    values = 21:24, na.value = 4,
+    # overwrite labels in legend
+    labels = c("carni" = "Carnivore", "herbi" = "Herbivore", "insecti" = "Insectivore", "omni" = "Omnivore")
+  )
+```
+
+#### Continuous
+```{r}
+ggplot(msleep, aes(x = sleep_total, y = sleep_rem)) +
+  geom_point(aes(fill = awake, size = awake), shape = 21) +
+  scale_fill_continuous(
+    # change legend title
+    name = "Hours awake:",
+    # apply a different (in-built) palette
+    type = "viridis", direction = -1,
+    # change color for NA category
+    na.value = "grey70",
+    # set legend steps
+    breaks = 1:4*5
+    # This is optional and will eliminate extra legend
+    # guide = guide_legend()
+  ) +
+  scale_size(
+    # change legend title
+    name = "Hours awake:",
+    # adjust bubble sizes
+    range = c(1, 4)
+  )
+```
+
+### Why are some legends combined, but others aren't?
+
+**Legends for different visual aesthetics are merged in ggplot2** if they:
+
+- map to the same variable,
+- share the same breaks,
+- have the same title (name), and
+- use the same type of guide.
+
+For instance, if both `fill` and `shape` are mapped to the same categorical variable (as in the "discrete" example above), they’ll be shown in a single combined legend — as long as their guides are compatible.
+
+However, mapping the same column to both fill and size (as in the "continuous" example above) will create two separate legends. A continuous fill scale typically produces a colorbar, while a size aesthetic yields a legend with distinct keys. _These won't be combined unless you explicitly adjust their guide types to match_.
+
+
+There’s more nuance here — and if you want to learn how to control, merge, or separate legends, hang tight: we’ll explore that in the upcoming lessons!
+
+If that makes you nervous — and you want to, or even have to, fix the legend above first before continuing — add `guide = guide_legend()` inside the fill scale.
+
+# Replacing Default Scales
+
+For now, we have mostly used the default scales and modified their default settings. But often you'll likely want to change the `scale_*()` function to apply manual values (as in the shape example above), to use a pre-defined transformation to your data beforehand, or to use a more suitable encoding.
+
+### Binning data
+You can group values of a continuous variable into regular "bins" — either along positional scales or for visual aesthetics like `fill` and `size`.
+
+```{r}
+ggplot(msleep, aes(x = sleep_total, y = sleep_rem)) +
+  geom_point(aes(fill = awake, size = awake), shape = 21) +
+  scale_fill_binned(
+    # change legend title
+    name = "Hours awake:",
+    # apply a different (in-built) palette
+    type = "viridis", direction = -1,
+    # change guide to merge legend
+    guide = guide_bins()
+  ) +
+  scale_size_binned(
+    # change legend title
+    name = "Hours awake:",
+    # adjust bubble sizes
+    range = c(1, 4)
+  )
+```
+### Transforming axes
+There are convenient shortcuts for common transformations with preset transform arguments: `*_log10()`, `*_sqrt()`, and `*_reverse()`.
+
+```{r}
+set.seed(123)
+x <- (1:10)*100
+dat <- data.frame(x = x, y = rnorm(100, 1000, 250) * x)
+
+ggplot(dat, aes(x = x, y = y)) +
+  geom_point() +
+  stat_smooth(method = "lm") +
+  # apply log transformation to x axis
+  scale_x_log10() +
+  # revert y axis
+  scale_y_reverse()
+```
+
+### Replacing palettes
+Use pre-built functions to apply popular palettes like ColorBrewer and viridis — e.g., `*_brewer()`, `*_distiller()`, and `*_viridis_c()`.
+
+```{r}
+ggplot(mpg, aes(x = factor(year), y = hwy)) +
+  geom_boxplot(aes(fill = drv)) +
+  scale_fill_brewer(
+    palette = "Set2",
+    name = "Drive train"
+  )
+```
+
+### Generating palettes
+Not happy with the default palettes for continuous values? Define your own using `*_gradient()`, `*_gradient2()`, or `*_gradientn()`.
+
+```{r}
+df <- data.frame(x = 0:10, y = -5:5)
+
+ggplot(df, aes(x, y, fill = y)) +
+  geom_col(color = "grey30") +
+  scale_fill_gradient2(
+    low = "#d13760",
+    mid = "white",
+    high = "#663e8e",
+    midpoint = 0,
+    name = "Deviance"
+  ) +
+  geom_hline(yintercept = 0, color = "grey30")
+```
+
+This covered just a few common and important `scale_*()` functions, but there are many more. We'll showcase many more examples along the way as they are important to customize a chart. But for now, it is most important to understand the general concept by heart.
+
+Once you have understood that, dive deeper into those that are most useful for your purpose. While many arguments are shared across the different variants, many scales have specific arguments. Whenever you are exploring some new options, familiarize yourself with its arguments.
+
+For specific use cases, explore our “Scales Explorer” below and consult the [help pages](https://ggplot2.tidyverse.org/reference/index.html#scales): they offer details and examples for each available `scale_*()` function.
+
+# A World of Scales
+There are about 87 scales functions referenced in the official [ggplot2 documentation](https://ggplot2.tidyverse.org/reference/index.html#scales).
+
+They can be grouped into four main categories based on the type of aesthetic they control: position, shape, size, and color/fill.
+
+# Crucial Concept — and More
+Scales are at the heart of many customization techniques. We’ll use them extensively to adjust color schemes, fine-tune axes, and customize legends. _They’re the engine behind it all._
+
+This lesson focused on the core idea behind aesthetics and scales: once a variable is mapped to an aesthetic, a scale controls how that mapping is visually translated into your plot.
+
+While we’ve only scratched the surface, upcoming lessons in Module 2 will show you how to fully leverage scales to fine-tune the details of how your data is represented in your visualizations!
