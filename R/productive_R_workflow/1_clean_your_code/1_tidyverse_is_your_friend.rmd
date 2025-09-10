@@ -1,0 +1,92 @@
+# Base R vs. Tidyverse
+
+Base R is the original R system that comes right out of the box when you install R. It includes everything you need to perform data analysis and is incredibly powerful.
+
+However, it can sometimes be **complex** and **unintuitive** for data manipulation and analysis, especially for those who are new to R.
+
+
+
+Let's consider this line of code:
+```{r}
+round(mean(subset(na.omit(data), species == "Adelie")$bill_length_mm),2)
+```
+
+_It's hard to read!_
+
+The `tidyverse`, on the other hand, is a collection of R packages designed with the goal of making data science faster, easier, and more accessible. It introduces a consistent and simplified syntax that can often make your code more readable and easier to write.
+
+```{r}
+library(tidyverse)
+
+data %>%
+  filter(!is.na(bill_length_mm), species == "Adelie") %>%
+  summarise(mean_bill_length = mean(bill_length_mm)) %>%
+  pull(mean_bill_length) %>%
+  round(2)
+```
+
+# What's in the Tidyverse
+
+The Tidyverse is an opinionated **collection of R packages** designed for data science. This suite of packages works in harmony because they share common data representations and syntax.
+
+This collection of packages is developed mainly by the RStudio team, and it has become one of the most popular ways to use R for data science.
+
+# Why you will love the tidyverse
+
+## Friendly Syntax 
+Think of the Tidyverse as speaking a more straightforward version of the R language. It uses a consistent set of rules across its tools, so once you learn how to do something in one tool, it's easier to do something similar in another.
+
+## Easy to Read
+Tidyverse code is like a well-organized book - it's written to be easy to read. This means when you look back at your code, or if someone else needs to check it, it's much clearer what each part is supposed to do.
+
+## Linking Steps Together
+Imagine a production line where each step is clearly connected to the next - that's what the `%>%` symbol does in Tidyverse. It lets you link different tasks together in a way that's easy to follow, like a recipe.
+
+## Handling Data with Ease
+Tidyverse has special tools, like `dplyr` for changing and fixing data, and `tidyr` for reshaping it. They're like having a Swiss Army knife for data - lots of functions in one place, all designed to make common data tasks simpler.
+
+## Modern Data Tables
+Tidyverse introduces `tibbles`, which are like the next-generation version of data tables in R. They're smarter and avoid some of the common frustrations you might run into with regular data tables.
+
+## Streamlined Work
+The Tidyverse is like a well-coordinated team where each member knows what the others are doing. This makes your journey from starting a data project to finishing it smoother and less complicated.
+
+# Getting Data In and Out
+Whether it's from a simple text file, a big spreadsheet, or a statistics program, Tidyverse has tools that make it faster and less of a headache to bring data into R and to export it out again.
+
+## Making Graphs
+`ggplot2` allows creating graphs in a way that's a bit like building with blocks - step by step, with a consistent approach.
+
+## Smarter Loops
+The `purrr` package lets you do repetitive tasks without writing loops, which can be tricky for beginners. It's like having a robot that can repeat tasks quickly and without mistakes.
+
+## Dealing wtih Text
+The `stringr` package gives you a set of easy-to-use tools for when you need to work with text, making tasks like finding and replacing words less of a chore.
+
+## Working with Lists and Vectors
+Tidyverse functions are often designed to work with whole columns or lists of data at once, so you don't have to tell R how to handle each individual item.
+
+## Helpful Community
+The Tidyverse has a big group of users who are always creating new guides, answering questions, and helping each other out. It's like being part of a club where everyone is there to support you.
+
+## Keeps Getting Better
+The Tidyverse is like an app that's regularly updated with new features. It's always getting improvements and additions, which means it stays up-to-date with what data scientists need.
+
+## Expandable
+There are lots of extra 'plugins' or packages that work with the Tidyverse, so you can add on specialized tools as you need them, just like adding apps to your phone.
+
+# Conclusion
+This page is not intended to provide a comprehensive tutorial on the `tidyverse`. If you're looking to master it, I highly recommend reading [R for Data Science](https://r4ds.hadley.nz/) by Hadley Wickham, a book often considered as the bible of `tidyverse` best practices.
+
+Learning it in-depth would require a significant time investment. However, I hope you now grasp the distinction between `tidyverse` and base R. I also hope you're convinced of its benefits!
+
+Now, let's enhance our penguin project by taking a step further and translating the original code into `tidyverse` conventions:
+
+# Homework
+1. Open the script called `analysis.R` we created in the previous lesson
+2. Install the `dplyr` and `ggplot2` libraries with the `install.packages()` function
+3. Use `dplyr` and `ggplot2` functions to perform the data wrangling and dataviz tasks. Use google or chatGPT to do so, this is how we do in real life!
+
+Before I let you go, it is important to note that there is some criticism of the tidyverse too! See [here](https://medium.com/data-science/a-thousand-gadgets-my-thoughts-on-the-r-tidyverse-2441d8504433) and [here](https://blog.ephorie.de/why-i-dont-use-the-tidyverse).
+
+
