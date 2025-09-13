@@ -1,0 +1,163 @@
+# No Guide Required!
+
+The chunk below shows a scatterplot using the `palmerpenguin` dataset, where _color_ is mapped to a variable.
+
+Add _direct labels_ to the colored groups — use `geom_text()` or `geom_label()`) in combination with the `positions` — then remove the color legend by setting `guide = "none"` in the appropriate `scale_*` function.
+
+Note: The size legend should remain visible!
+
+```{r}
+library(ggplot2)
+
+# Define label positions and text
+position <- data.frame(
+  x = c(34, 50, 57),
+  y = c(20, 13, 19),
+  label = c("Adelie", "Gentoo", "Chinstrap")
+)
+
+ggplot(datasets::penguins, aes(x = bill_len, y = bill_dep, color = species)) +
+  geom_point(aes(size = body_mass), alpha = 0.7) +
+  # Useing the separate dataset we made above for positioning
+  geom_text(data = position, mapping = aes(x = x, y = y, label = label, color = label), size = 6, fontface = "bold") + 
+  scale_color_discrete(guide = "none") # Use discrete here because that is the color scale we are using
+```
+
+Legends can be useful, but they often clutter your plot and force readers to look back and forth between the graph and the legend: a distracting and unnecessary step.
+
+Whenever possible, use *direct labeling* instead. It makes your visualization easier to read and your message clearer.
+
+# Decode the Codes
+The chunk below shows a boxplot with groups labeled **F, G, I, and D** on the x axis.
+
+Don’t make your readers guess! Instead, use labels that are as short and informative as possible.
+
+```{r}
+df <- data.frame(
+  country = rep(c("F", "G", "I", "D"), each = 20),
+  value = c(rnorm(20, 5), rnorm(20, 7), rnorm(20, 6), rnorm(20, 8))
+)
+
+ggplot(df, aes(x = country, y = value)) +
+  geom_boxplot() +
+  scale_x_discrete(labels = c(
+    "F" = "France",
+    "G" = "Germany",
+    "I" = "Italy",
+    "D" = "Denmark"
+  ))
+```
+
+Sometimes, the default group names in your dataset are not very informative or user-friendly. For example, you might have codes representing groups, but you want to display their full names on your plot.
+
+`scale_x_discrete(labels = ...)` lets you easily rename the tick labels on the x axis, making your plots clearer and more professional. Passing named vectors ensures that the labels are matched correctly.
+
+# Taming Exponential Growth (Once Again)
+We have data from a bacterial culture experiment. The population grows exponentially over time, but the current plot makes it hard to see the early growth phase.
+
+**Apply a log transform to the y-axis using `scale_y_log10()` to reveal the linear relationship in the growth pattern.**
+
+Hint: Just add `scale_y_log10()` to your plot.
+
+```{r}
+# Create bacterial population data with exponential growth
+set.seed(456)
+bacteria_data <- data.frame(
+  time = seq(0, 24, length.out = 80),  # 80 time points
+  population = pmax(round(100 * exp(0.3 * seq(0, 24, length.out = 80)) + abs(rnorm(80, 0, 200)), 1))
+)
+
+ggplot(bacteria_data, aes(x = time, y = population)) +
+  geom_point(color = "#d13760", size = 2, alpha = 0.7) +
+  scale_y_log10() +
+  labs(
+    title = "Bacterial Population Growth",
+    x = "Time (hours)",
+    y = "Population (cells)"
+  )
+```
+
+Log transforms are essential for visualizing data with exponential relationships. They can reveal patterns that are completely hidden in the original scale.
+
+While `coord_trans()` can apply a log transformation, **the recommended way in ggplot2 is to use `scale_y_log10()`**. This approach gives you more control over axis breaks, labels, and formatting.
+
+# Break It Your Way
+The chunk below shows a scatterplot of some data. The x axis has default tick marks.
+
+Use the `breaks` attribute of `scale_x_continuous()` to set the x axis ticks at `0`, `10`, and `20` only.
+
+```{r}
+set.seed(42)
+data <- data.frame(
+  x = seq(0, 20, by = 1),
+  y = 3 * seq(0, 20, by = 1) + rnorm(21, 0, 5)
+)
+
+ggplot(data, aes(x = x, y = y)) +
+  geom_point(color = "#00978A", size = 2) +
+  scale_x_continuous(breaks = c(0, 10, 20)) +
+  labs(
+    title = "Custom X Axis Ticks",
+    x = "X Value",
+    y = "Y Value"
+  )
+```
+
+By default, ggplot2 chooses where to place tick marks on your axes. But sometimes, you want to control exactly where those ticks appear.
+
+`scale_x_continuous()` and its `breaks` attribute gives you full control!
+
+# Bin There, Done That
+The bar chart below shows the distribution of gross horsepower across a range of cars. However, since horsepower is numeric, **the default bar chart isn't well-suited for this task**.
+
+**Add a scale that bins the data into groups of similar values**. To make it look more like a histogram, also set the bar width so the bars touch each other!
+
+Play around with the scale-specific arguments to control the number of groups and axis labels.
+
+```{r}
+ggplot(mtcars, aes(x = hp)) +
+  geom_bar() +
+  # turn into histogram
+  scale_x_binned(n.breaks = 7, nice.breaks = F)
+```
+When visualizing a numeric variable, bar charts can be misleading — they’re designed for categorical data. What you likely want is a histogram: a chart that shows the distribution of values across intervals.
+
+While `geom_histogram()` is a classic solution, `scale_x_binned()` lets you _reuse familiar layers like `geom_bar()`_ while binning the data on the scale level. **It’s especially useful when layering it with other geometries**.
+
+# Double Vision (Done Right)
+
+The chart below shows average monthly temperatures in Celsius for Barcelona (2024). Add a secondary y-axis that displays the corresponding temperature in Fahrenheit.
+
+Hint: Use `sec.axis = sec_axis(...)` inside the scale function. The transformation is: `°F = °C × 9/5 + 32`.
+
+Don’t forget to label both axes clearly to reflect the different units!
+
+Bonus Task: Add custom breaks for both axes to make the chart easier to read.
+
+```{r}
+# Temperature data in Celsius (Barcelona, 2024)
+temp_barcelona <- data.frame(
+  month = 1:12,
+  temp_avg = c(8.3, 9.4, 11.7, 13.3, 16.7, 21.1, 23.9, 24.4, 21.7, 17.2, 12.2,
+8.9)
+)
+
+ggplot(temp_barcelona, aes(x = month, y = temp_avg)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(
+    name = "Temp °C",
+    breaks = seq(0, 25, by = 5),
+    sec.axis = sec_axis(
+      transform = ~ . * (9/5) + 32,
+      name = "Temp °F",
+      breaks = seq(45, 80, by = 5)
+    )
+  )
+```
+
+Dual-axis charts are [often discouraged](https://www.datawrapper.de/blog/dualaxis) for being confusing or misleading. But in some cases, a secondary axis can add meaningful context — for example, by showing values in an alternative unit.
+
+With `sec.axis`, you can add such an axis using `sec_axis()`, typically by passing a direct mathematical transformation of the primary scale.
+
+Just make sure the transformation is accurate and doesn’t obscure your main message!
