@@ -1,0 +1,125 @@
+# Code Formatting: why?
+
+Code formatting might seem like a cosmetic aspect of coding, but it's much more. It's about making code **readable**, **maintainable**, and **standardizing** a style across teams and projects.
+
+If a coworker comes to your desk with a code chunk looking like this, what is your first thought?
+
+```
+cleaNDatA = data %>%
+  rename(ID = 1,Name = 2     ,Age = 3) %>%
+    mutate(Age=ifelse(Age < 0, NA,     Age)) %>% drop_na() %>%
+      mutate(Age =       as.integer(Age)) %>%
+  select(-Name)
+```
+
+Confusing isn't it?
+
+While we could write code without adhering to a format, doing so makes understanding and working with the code _unnecessarily difficult_.
+
+Now, let's check the same code chunk, but respecting the key best practices:
+
+```
+clean_data <- data %>%
+  rename(ID = 1, Name = 2, Age = 3) %>%
+  mutate(Age = ifelse(Age < 0, NA, Age)) %>%
+  drop_na() %>%
+  mutate(Age = as.integer(Age)) %>%
+  select(-Name)
+```
+That's not a big change! But it surely makes reading easier.
+
+# The Tidyverse Style Guide
+
+The [Tidyverse style guide](https://style.tidyverse.org/) is a comprehensive set of best practices for writing R code. It's not just about aesthetics; it's about writing code that your future self and others can understand at a glance.
+
+So let me summarize the main items for you:
+
+### Use good names
+Give meaningful names to your variables! For instance, `data_france_montpellier` is much better than `dataA`.
+Use snake_case for object names.
+Use verbs for function names.
+
+### Add spaces where needed, and only where needed
+Place spaces around all infix operators and after commas.
+For instance, this looks bad:
+
+```
+data <-     read.csv(   "data.csv",sep=",")
+```
+And this looks better
+
+```
+data <- read.csv("data.csv", sep=",")
+```
+
+### Use short lines
+Limit lines to 80 characters where possible for **readability**. When you write code to the next line, **indent** your code.
+
+Never do it manually! Read the next section of this lesson to learn how to do it automatically.
+
+### Comment your code
+Comment your code using `#`. Try to not only explain what the code does, but also _why_ you did it like that.
+
+```
+# Remove Seattle data: weather was bad and data is not trustworthy
+df <- df %>% filter(location != "Seattle")
+```
+### Semicolons
+Don’t put `;` at the end of a line, and don’t use `;` to put multiple commands on one line.
+
+### Assignment
+Use `<-`, not `=`, for assignment.
+```
+# Good
+x <- 10
+
+# Bad
+x = 10
+```
+### Pipes
+`%>%` and `|>` should always have a space before it, and should usually be followed by a new line. After the first step, each line should be indented by two spaces.
+
+### ggplot2
+When writing ggplot2 code, format it for maximum readability and clarity.
+
+Chain together the components of your plot using the + operator and place each component on a new line.
+
+```
+# Begin with the ggplot function and add layers
+  ggplot(data = df, aes(x = var1, y = var2)) +
+    geom_point() +
+    geom_line() +
+    labs(title = "Plot Title", x = "X-axis Label", y = "Y-axis Label") +
+    theme_minimal()
+```
+
+# `styler`: Automatic Styling in RStudio
+Applying the tidyverse style guide manually can be _time-consuming_.
+
+`styler` is an R package that formats your code automatically. It integrates with RStudio to format scripts and R Markdown/Quarto files. With a single command or a few clicks, you can transform your code to follow the tidyverse conventions
+
+In my opinion, the best way to use `styler` is through R studio. Try the following:
+
+1. Open R studio and create a new script (`file` → `new file` → `R script`)
+2. Copy & paste the poorly formatted code chunk provided in the first section of this lesson
+3. Click the `addins` button → style active file. Note that you might have to install the `styler` package first and restart R Studio.
+
+# Conclusion Adopting the tidyverse style guide and using tools like `styler` is a quick win for improving your code's readability and your productivity.
+
+However, there are limitations, such as the lack of formatting-on-save and a less polished user experience when working with R Markdown files.
+
+Despite these, the benefits of consistent code formatting are substantial, making it a practice well worth adopting.
+
+# Homework
+1. Open the script called analysis.R we created in the previous lesson
+2. Use `styler` through the R Studio addin to format the code.
+
+
+
+
+
+
+
+
+
+
