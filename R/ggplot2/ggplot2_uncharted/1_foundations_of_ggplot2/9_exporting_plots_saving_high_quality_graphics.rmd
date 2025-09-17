@@ -1,0 +1,92 @@
+# From Plot to Image
+
+Sharing your plots effectively means more than just exporting an image. Correctly handling dimensions, resolution, and format ensures that your graphics remain sharp, readable, and visually consistent — whether they appear in papers, presentations, or online.
+
+In R with ggplot2, your workhorse is `ggsave()`.
+But exporting is usually more than `ggsave("my_plot.png")`.
+
+`ggsave()` does not only handle the name and **format** of the file (based on the extension, such as `.png`, `.pdf`, `.svg`), but lets you control the _aspect ratio_ and _resolution_ so the output looks crisp wherever it goes.
+
+* _Format_ — add a file extension to the name of your plot. Before choosing a specific file format, it helps to know the general distinction between raster and vector graphics:
+  * _Raster files_ (like `png`, `jpg`, and `tif`) are made of pixels, so enlarging them too much can make them blurry or blocky. Pick raster for web and on-screen use with appropriate pixel dimensions, e.g. 1200×800 px. Use higher resolution (~300–600 dpi) when preparing files for print sharing via social media or messengers.
+  * _Vector files_ (like `pdf` and `svg`) store shapes and lines, so they can be scaled infinitely without losing sharpness. Choose vector for print and post-editing in tools like Adobe Illustrator, Inkscape, or Figma. Avoid vector files when using very large datasets with millions of points (files can get heavy).
+* _Aspect ratio_ — control the aspect ratio by setting `width` and `height` (using values with `"in"` or `"cm"` as units). If you increase the plot size, geometries and theme elements will appear smaller.
+* Resolution (DPI) — controls the pixel density of raster files. Does not apply to vector files, and is irrelevant for web graphics.
+
+# Saving Plots
+By default, `ggsave()` exports the _last ggplot you generated_, and places it in your current working directory. The extension decides the format — `.png`, `.tif`, `.pdf`, ... well, we covered that already.
+
+You specify the file name and extension by passing it to the `filename` argument. If you want to store the plot in a different folder, you can specify:
+
+* the full path pointing to the directory along with the name like `"/Users/Emy/Project/plots/fig1.png"`, or starting with e.g. `"C:/"` on Windows (problematic when code is used on other machines!)
+* a relative path like `"plots/fig1.png"` (relative to your current working directory). You can also add `./` for clarity, e.g. `"./plots/fig1.png"`
+* a relative path built with `file.path()`, which safely combines directory and file names across operating systems, e.g. `file.path("plots", "fig1.png")`
+
+Note: Windows uses the backslash `\` in file paths, but in R this acts as an escape character. To avoid problems, use `/` or `\\` instead — or simply use `file.path()` to build the path in a robust way.
+
+You also can store a plot first and then hand over the ggplot object by specifying `plot =` as well.
+
+```
+# last plot saved as PNG in current working directory
+ggsave(filename = "fig1.png")
+
+# explicit plot object saved as PDF in subfolder
+ggsave("./plots/fig1.pdf", plot = figure_1)
+```
+Often, users rely on _implicit matching_ here — the filename is provided first, so specifying the argument name (filename =) isn’t necessary, as shown in the second example above.
+
+# Controlling the Export
+When saving plots, it’s best to set the canvas _explicitly_ so the file is ready for its final destination — whether that’s a paper, a slide deck, or the web.
+
+First, control the _aspect ratio_ by setting width and height:
+```
+ggsave("fig1.png", width = 9, height = 5.5)
+```
+
+By default, these numbers are in _inches_. Prefer centimeters? Millimeters? Or pixels? Just switch the  _units_:
+```
+ggsave("fig1.png", width = 23, height = 13, units = "cm")
+```
+
+For raster formats like PNG or TIFF, you’ll also want to set the _resolution_ with dpi (dots per inch):
+```
+ggsave("fig1.png", width = 9, height = 5, dpi = 600)
+```
+
+Optionally, set the _background_ explicitly with `bg` — helpful if your plot is placed over colored slide backgrounds or webpages:
+```
+ggsave("fig1.png", width = 9, height = 5,
+       dpi = 600, bg = "white")
+```
+
+## The Annoying Process of "Getting the Size Right"...
+One of the most asked questions in my live workshops is this:
+
+**How do I get the size right so that geometries and theme elements look good — and not so different from what I see in the plot preview pane?**
+
+A moment likely every ggplot user has faced — but hates to be reminded of: you’ve fine-tuned a chart you’re proud of, only to realize: **the exported graphic looks awful** (and sadly not the "awful-as-in-amazing" kind).
+
+Relying on the plot pane in Rstudio or Positron to tweak the size is not helpful as it adjust to the window size and doesn't reflect your export settings.
+
+To avoid surprises, **it’s best to decide on your target size early**, latest once you have an idea how your plot should look like and what it contains.
+
+Nevertheless, finding the right sizes for all components of the plot can become very time-consuming, as we end up with the classic trial-and-error approach: **Save the plot, inspect it, tweak it — and repeat**.
+
+For more detailed graphics, this can easily mean: doing that a few hundreds times! To avoid switching between your coding environment and the plot folder but see your future output directly, there are two approaches to simplify your life:
+
+* Use Quarto notebooks with `fig-width`, `fig-height` and `fig-dpi` set for all plotting chunks like this:
+```
+    #| fig-width: 9
+    #| fig-height: 6
+    #| fig-dpi: 100
+```
+When you preview the plots in-line, they show up as if you export them with the same specifications set in `ggsave()`.
+
+Use the [camcorder package](https://thebioengineer.github.io/camcorder/) to automatically capture every generated ggplot with user-specific width, height and resolution. It will not only export the plot — but display the result directly in your IDE!
+
+[Read more about how it works in the dedicated article.](https://thebioengineer.github.io/camcorder/articles/camcorder_view.html)
+
+# High-Quality Output
+
+
+
