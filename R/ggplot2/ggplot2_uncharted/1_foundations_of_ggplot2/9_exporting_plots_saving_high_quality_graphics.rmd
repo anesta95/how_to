@@ -87,6 +87,37 @@ Use the [camcorder package](https://thebioengineer.github.io/camcorder/) to auto
 [Read more about how it works in the dedicated article.](https://thebioengineer.github.io/camcorder/articles/camcorder_view.html)
 
 # High-Quality Output
+R uses a `device` to transform your R objects into images. But for professional publications, default devices may not always give the best results.
 
+Issues can arise with custom typefaces, the depiction of symbols and emojis, and even subtle differences in rendering across formats or operating systems.
 
+Two common solutions for high-quality output in R are **AGG-based devices** provided by the **ragg package** and **Cairo-based devices** already included in base R’s **grDevices** (if R was built with Cairo support).
 
+# Rendering Raster Files with ragg
+The [ragg package](https://ragg.r-lib.org/) provides raster devices built on the **AGG (Anti-Grain Geometry)** rendering library, that is known for smooth anti-aliasing and reliable text output. It makes high DPI images easy to create and ensures fonts, symbols, emojis, and also right-to-left scripts render fast and consistently, even across platforms.
+
+By default, `ggsave()` uses AGG-based devices now — if the ragg package is installed. To enable them, simply install the package with `install.packages("ragg")`.
+
+To specify it explicitly, use the `device` argument:
+```
+ggsave(
+  here::here("plots", "fig1.png"),
+  width = 6, height = 5, dpi = 600,
+  device = ragg::agg_png
+)
+```
+# Rendering PDF Files with Cairo Devices
+**Cairo devices** produce high-quality vector (and also raster) output with robust font and symbol support. It's ideal for plots with complex text, ligatures, or annotations, that are exported as PDF vector files.
+
+You can render your PDF by specifying the `cairo_pdf` as device:
+```
+ggsave(
+  here::here("plots", "fig1.png"),
+  width = 6, height = 5, dpi = 600,
+  device = cairo_pdf
+)
+```
+The graphics `device` backends has a huge impact on how your visualizations are rendered. The example below illustrates the differences, suming up nicely why choosing the right device matters for high-quality graphics — especially when running the code on different operating systems.
+![raster-file-rendering-device-comparison.png](../../../../.imgs/raster-file-rendering-device-comparison.png)
+
+This lesson was quite technical, and we believe it’s easier to follow when you see it in action. Here’s [a video](https://youtu.be/Ha2P8FPzMbU) of Cédric saving a few charts and tackling some of the most common issues!
