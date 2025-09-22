@@ -1,0 +1,24 @@
+# Goal
+The purpose of this first mini-project is to put your newly acquired `ggplot2` skills into practice and make sure you’ve absorbed the key concepts from the first module.
+
+Your task: pick one of the datasets below, open R locally (or in a cloud setup), and create a few basic charts to visualize it. No need to get fancy yet — we’ll dive into customization in the upcoming modules.
+
+# Datasets
+Palmer Penguins: Easy
+HYDE: Population & Land Use: Easy
+The Simpsons episodes dataset: Medium
+
+# Let's Go!
+Try to create at least five charts using the provided datasets. Feel free to focus on one dataset or experiment with all of them — you’re the project lead and the data explorer here!
+
+Open R in your favorite IDE, load one of the datasets, and start exploring and visualising the data. If you’re unsure how to set up your own project, check out the [bonus lesson](https://www.ggplot2-uncharted.com/bonus/own-r-project).
+
+# Done With One Chart — or Even All Five?
+Celebrate your progress, get feedback, and inspire others!
+
+We’d love for you to share your achievements with the community by posting them to the dedicated [#share-your-viz](https://discord.com/channels/1371405022041997332/1371405853038743673) channel!
+
+[Share your work](https://discord.com/channels/1371405022041997332/1371405853038743673)
+
+# Got Stuck or Have Questions?
+Don’t hesitate to ping us on the [#help-and-support](https://discord.com/channels/1371405022041997332/1375043871997825075) Discord channel.

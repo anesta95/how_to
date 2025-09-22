@@ -1,0 +1,45 @@
+# The problem
+Imagine you've been diligently working on a data analysis project in R. You have a mix of various scripts, datasets, and outputs.
+
+It works flawlessly.
+
+Now comes the day you decide to move the folder to a new laptop you just bought!
+
+Suddenly, nothing runs as it should. Scripts throw errors, data can't be found, and your carefully crafted analyses come to a screeching halt.
+
+The problem?
+
+Your project wasn't self-contained!
+
+You moved your script, but you forgot a dataset that was stored in another folder like /documents. On top of that, you were using a file stored on the web, but url is now broken.
+
+# The Solution: self-contained projects
+All the files required to run your analysis must be _in_ the folder. You must not read a file somewhere else on your computer or on the web.
+
+Or one day it will be broken.
+
+It is very simple and obvious, but believe me, so many projects get lost forever because of this.
+
+# Folder structure
+Since we're on the topic, let's consider how your project folder should be organized.
+
+While there isn't a single definitive method, a recommended approach might begin as follows:
+```
+project/
+- README.md   # Project description written in Markdown (we will talk about this later)
+- R/          # Where the R scripts live
+- input/      # Data files
+- output/     # Results: plots, tables..
+```
+
+# Application
+Let's apply this to our `penguin` project!
+
+For now we have only 1 file called `analysis.R` that is reading a file on the web. Let's transform this in a self-contained working folder!
+0. You should have a folder called productive-r-workflow with a script called analysis.R already!
+1. Create 3 folders: input, output, and R. Move the analysis.R file in the R folder.
+2. The penguin dataset is currently downloaded from the web. Instead, save it in the input folder (call it data.csv) and update analysis.R to reflect this new location
+
+This was a pretty short and easy lesson. But I swear it has such a big impact for collaboration, maintainability and reproducibility of your work.
+We are not done with project organization yet! Let's see how to make 100% sure your analysis can still be run four years from now!
+

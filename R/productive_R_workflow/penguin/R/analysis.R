@@ -4,7 +4,7 @@ library(ggplot2)
 library(tidyr)
 
 # Old: Pre Module 1
-data <- read.csv("https://raw.githubusercontent.com/holtzy/R-graph-gallery/master/DATA/data_2.csv")
+data <- read.csv("./input/data_2.csv")
 
 summary(data)
 
@@ -38,7 +38,7 @@ legend("topright",
 # New: Homework after Module 1
 # All one pipe!
 read_csv(
-  file = "https://raw.githubusercontent.com/holtzy/R-graph-gallery/master/DATA/data_2.csv"
+  file = "./input/data_2.csv"
 ) |>
   drop_na() |>
   ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +

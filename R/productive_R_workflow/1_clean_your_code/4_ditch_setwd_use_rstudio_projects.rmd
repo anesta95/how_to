@@ -1,0 +1,76 @@
+# Problem: the `setwd()` nightmare
+When you are working with R, your code run in a folder called the current directory.
+This is the folder in which R looks for files. You can check what's the current directory with the following command:
+```{r}
+getwd()
+```
+You can decide what directory to work in, and then read a file in this directory. It often looks like this:
+```
+# Set the working directory
+setwd("/Users/holtzy/Desktop/") 
+
+# Ask R to read a file that is located in this directory
+data <- read.csv("data.csv")
+```
+
+But then perhaps you want to move your project folder from `Desktop` to `Document`. Or somebody else wants to run your code on their machine?
+
+In this case, you will have to update the `setwd()` statements again and again.
+
+It is a very bad working experience. It is very unproductive. And it is very dangerous for reproducibility.
+
+# Solution: use RStudio project
+A RStudio Project is a working directory that has a specific organization.
+
+What's great with it is that when you open an RStudio project, the the current directory is automatically set properly! So wherever you put the folder, reading a file just works.
+Basically, you won't have to use `setwd()` anymore! This is a big win for portability and reproducibility.
+
+Now is a good time to setup your first RStudio project:
+1. Open RStudio
+2. Create a new project: click `file`, then `new project`.
+3. Click `New Directory`, then `New Project`. Give a temporary name to your project, like `test`.
+4. Create a script called `analysis.R` and store it in this folder. Write a very simple line of code in it, like `1 + 1`.
+5. Close RStudio
+
+Success!
+
+You just created your first R Studio project.
+
+Find your `test` folder in your explorer / finder. Inside it you should see your `analysis.R` file. You should also see a file called `test.Rproj`.
+
+Clicking on this file will open the whole project in RStudio.
+
+# Three main benefits
+1. No more `setwd()`: Current working directory is set properly when you open the project.
+2. Isolation of workspaces: Easily jump from one project to the other in the UI.
+  - Let's say you are working on several projects in parallel. RStudio allows to easily switch from one to the other. Check the little dropdown menu at the top right of the screen. Once more, when you switch to another project the current working directory is updated automatically.
+3. Set project options: Personalize your project settings. Do not save workspace.
+  - Many settings are available to customize your project. You can access them by clicking the `.RProj` file in the `Files` tab of the bottom right panel. Many options are available.
+  It is advised to turn of the `Restore .RData`, `Save workspace` and `save history` options (more about this later).
+
+# A few more steps for reproducibility
+Ditching `setwd()` was a quick win thanks to RStudio projects!
+
+You just made a big step towards more reproducibility and easier collaboration for your work!
+
+There are 3 other mistakes you should avoid. Let's see if you can guess what to do about `rm(list=ls())` and the `preserve your workspace` questions:
+
+1. `rm(list=ls())` removes all the variables from the current environment. It creates an illusion of security! For instance, it keeps all the packages loaded! Please restart R studio altogether instead, to really restart from scratch.
+2. RStudio asks if you want to save the current workspace. What do you answer?
+  - Nope, discard everything. Your analysis must be able to run from scratch any time, only based on your data input and scripts!
+3. Do you see something wrong in the following line of code: `data = read_csv("/Users/holtzy/Desktop/productive-r-workflow/input/data.csv")`
+  - Yes. This code uses an absolute path, which means a path from the roots of the computer. It is the same as using `setwd()`! If you move your work, this code won't work anymore. Instead, use a RStudio project and a relative path: `data = read_csv("input/data.csv")`
+  
+0. You should have a self-contained folder called `productive-r-workflow` already.
+1.Transform this folder in a R Studio project:
+  - Open RStudio. Click on `file` → `New Project` → `Existing directory`. Find the `productive-r-workflow` folder and click `Create Project`.
+  - Close R Studio.
+2. Open your work folder in the explorer / finder.
+  - Click the `.Rproj` file.
+  - It should open the project in RStudio with the proper current working directory. Double check using `getwd()`.
+3. You can now remove the setwd call from your code and use a relative path instead!
+
+# Going further
+Jenny Bryan did a talk on this topic in 2012. One of her slide is very famous in the R community. It says: If the first line of your R script is `setwd("C:\Users\jenny\path\that\only\I\have")` I will come into your office and SET YOUR COMPUTER ON FIRE 🔥.You can [read her explanation](https://www.tidyverse.org/blog/2017/12/workflow-vs-script/)!
+
+`renv` is an R package to make R projects more isolated, portable and reproducible. It records the exact package versions you depend on for your project, so your code will still work in 10 years! It's a bit too advanced for this course, but [check their documentation](https://github.com/rstudio/renv) if interested.
