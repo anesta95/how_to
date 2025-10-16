@@ -1,0 +1,37 @@
+# Story time
+
+Reinhart and Rogoff, two Harvard economists, published a paper in 2010 titled [Growth in a Time of Debt](https://scholar.harvard.edu/files/rogoff/files/growth_in_time_debt_aer.pdf).
+
+Their work suggested that countries with public debt exceeding 90% of GDP experience markedly lower economic growth. This conclusion had a substantial impact on economic policy discussions worldwide.
+
+However, in 2013, a significant flaw in their analysis was discovered by Thomas Herndon who attempted to replicate Reinhart and Rogoff's results for an assignment.
+
+***He found a spreadsheet error!***
+
+An incorrect formula in Excel that excluded certain data rows from their calculations. This error led to skewed results.
+
+When corrected for these errors, the strong relationship between high debt and low growth that Reinhart and Rogoff had reported was significantly weakened. This revelation sparked a major debate
+
+in the economics community about data integrity, replication in research, and the influence of academic work on public policy.
+
+The Reinhart and Rogoff episode serves as a powerful lesson on the importance of meticulous data handling and the potential consequences of mistakes in data analysis.
+
+# Editing raw data manually is tempting
+
+Editing a cell in a spreadsheet takes less than a second. Adding a new column less than a minute.
+
+***It is tempting!***
+
+But it is one of the mechanisms that leads to the research reproducibility crisis. When you edit a spreadsheet manually, you might insert errors in it. And you won't be able to revert to the original version. People reviewing your work will struggle to understand what you have done exactly and to reproduce it.
+
+If you do it _with code_ instead, you will keep track of the exact data preparation steps to perform. You will know forever what's been done, and how to correct it if necessary.
+
+# How to avoid it
+We created a `input` folder in our working directory and put the `data.csv` file in it. Now there is just 1 rule to follow:
+
+***Never, ever modify this file***
+
+Instead, we can open it with R and apply any kind of data wrangling on it. If this step is big, we can even isolate it in its own script (`data_cleaning.R` for instance) and save the result in a new dataset (`clean_data.csv` for instance).
+
+We will see how to do that more practically in lesson 9: split your work.
+

@@ -1,0 +1,65 @@
+# Problem: the `.csv` export
+
+Back in the days, I remember spending so much time doing some `.xlsx` → `.csv` conversion.
+
+It comes with several drawbacks!
+
+1. **Time consuming**: one more unecessary step in your pipeline
+2. **Error prone**: you can easily lose some formatting while doing the conversion, or struggle with special characters
+3. **Lose the Multi-Sheet Structure**
+4. **Size Limitations**: you are now storing the data twice!
+5. **Metadata**: Excel files can contain metadata like comments, author information, and other properties that are lost when converted to .csv
+
+
+As usual, the tidyverse team came with a pretty good workaround: the `readxl` package.
+
+# Solution: the `readxl` package
+The `readxl` package makes it easy to get data directly out of Excel and into R.
+
+It is part of the tidyverse!
+
+It is easy to install and use, and supports both the legacy `.xls` format and the modern `.xlsx` format
+
+Here is how to use it:
+```{r}
+# ONLY ONCE: install the package
+# install.packages("tidyverse")
+
+# Load the package (not that it is not part of the core tidyverse!)
+# library(readxl)
+
+# Read a file
+# data <- read_excel("data.xlsx")
+```
+
+# Main features
+Here is a list of my favorite `readxl` features. Check the [doc](https://readxl.tidyverse.org/) for a complete list!
+
+→ **Read a specific sheet**:
+```{r}
+# data <- read_excel("data.xlsx", sheet = "sheetNameOrNumber")
+```
+
+→ **Specify how missing data are represented**:
+```{r}
+# data <- read_excel("data.xlsx", na = "-")
+```
+
+→ **Specify column types**:
+`readxl` is pretty good at guessing. But you can specify them manually:
+```{r}
+# data <- read_excel("data.xlsx", col_types = c("date", "skip", "guess", "numeric"))
+```
+
+# Homework
+Our Penguin project is currently based on a `data.csv` file. But this file was originally a `.xlsx` file.
+
+Let's see if we can skip the `csv` step?
+
+
+1. Download the penguin `xslx` file here. (There is a little download icon).
+2. Delete the old `data.csv` file that was in the input folder. Add the new `data.xlsx` instead.
+3. Update the code in `analysis.R`:
+Install and load the `readxl` library. Use the `read_excel()` function to read the excel file.
+Make sure to use the `na` argument in the function to handle missing values correctly!
+

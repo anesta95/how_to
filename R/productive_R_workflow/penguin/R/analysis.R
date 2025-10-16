@@ -2,6 +2,7 @@ library(readr)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(readxl)
 
 # Old: Pre Module 1
 data <- read.csv("./input/data_2.csv")
@@ -54,3 +55,28 @@ read_csv(
     legend.position = "top",
     legend.justification = "right"
   )
+
+# New: Homework after Module 1 Lesson 7 using readxl
+read_excel(
+  path = "./input/data.xlsx",
+  sheet = "Tab 1",
+  na = "NA"
+) |>
+  drop_na() |>
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(aes(color = species, shape = species)) +
+  labs(
+    title = "Penguin Bill Dimensions",
+    x = "Bill Depth (mm)",
+    y = "Bill Length (mm)",
+  ) +
+  theme_classic() +
+  theme(
+    legend.title = element_blank(),
+    legend.position = "top",
+    legend.justification = "right"
+  )
+
+
+
+
