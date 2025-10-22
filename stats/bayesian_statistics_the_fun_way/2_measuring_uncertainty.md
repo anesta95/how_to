@@ -81,3 +81,62 @@ There are only two possibilties: either there is a Wikipedia article on the Mand
 ```math
 P(H_{no\:article}) = 20 * (1 - (P(H_{no\:article})))
 ```
+
+Next we can expand $20 * (1 - P(H_{no\:article}))$ by multiplying both parts in the parentheses by 20 and we get:
+```math
+P(H_{no\:article}) = 20 - 20 * P_{no\:article}
+```
+We can remove the $P(H_{no\:article})$ term from the right side of the equation by adding $20 * P(H_{no\:article})$ to both sides to isolate $P(H_{no\:article})$ on the left side of the equation. Remember that $P(H_{no\:article}) + (20 * P(H_{no\:article})) = 21 * P(H_{no\:article})$:
+
+```math
+21 * P(H_{no\:article}) = 20
+```
+And we can divide both sides by 21, finally arriving at:
+
+$P(H_{no\:article}) = \frac{20}{21}$
+
+Now you have a clearly defined value between 0 and 1 to assign as a concrete, quantitative probability to your belief in the hypothesis that there is no article on the Mandela effect. We can generalize this process of converting odds to probability using the following equation:
+
+```math
+P(H) = \frac{O{H}}{1 + O(H)}
+```
+
+Often in practice, when you're confronted with assigning a probability to an abstract belief, it can be very helpful to think of how much you would bet on that belief.
+
+### Measuring Beliefs in a Coin Toss
+Rather than thinking about a coin toss as an _event_, we can rephrase the question as "How strongly do I believe the next coin toss will be heads?" Now we're not talking about $P(heads)$ but rather __a hypothesis or belief about the coin toss__ $P(H_{heads})$.
+
+Just like before we need an alternate hypothesis to compare our belief with. We could say the alternate hypothesis is simply not getting heads $H_{\neg\:heads}$, but the option of getting tails $H_{tails}$ is closer to our everyday language, so we'll use that. It is important for this discussion to acknowledge that:
+
+```math
+H_{heads} = H_{\neg\:heads},\:and\:P(H_{tails}) = 1 - P(H_{heads})
+```
+
+We can look at how to model our beliefs as __the ratio between these competing hypotheses__:
+```math
+\frac{P(H_{heads})}{P(H_{tails})} = ?
+```
+Remember we want to read this as "How many times greater do I believe that the outcome will be heads than I do that it will be tails?" As far as bets go, since each outcome is equally uncertain, the only fair odds are 1 to 1. Of course, we can pick any odds as long as the two values are equal: 2 to 2, 5 to 5, 10 to 10, etc. They all have the same 1 to 1 ratio.
+
+Given that the ratio of these is always the same, we can simply repeat the process we used to calculate the probability of there being no Wikipedia article on the Mandela effect. We know that our probability of heads and the probability of tails must sum to 1, and we know that the ratio of these two probabilities is also 1. So we have two equations that describe our probabilities:
+```math
+P(H_{heads}) + P(H_{tails}) = 1\:and\:\frac{P(H_{heads})}{P(H_{tails})}
+```
+
+If you walk through the process we used when reasoning about the Mandela effect, solving in terms of $P(H{heads})$ you should find the only possible solution to this problem is $\frac{1}{2}$. This is exactly the same result we arrived at with our first approach to calculating the probabilities of events, and it proves that our method for calcualting the probability of a belief is robust enough to use for the probability of events!
+
+Since we can see that both the methods/types of probabilities: the *probability of beliefs* & the *probability of events*, are equivalent, you can use whichever method is easiest for a given problem.
+
+
+# Wrapping Up
+We define **probability** as *the ratio of the outcome(s) we care about to the number of all possible outcomes*. While this is the _most common_ definition of probability, it is *difficult to apply to beliefs* because most practical, everyday probability problems to _not_ have clear-cut outcomes and so _aren't intuitively assigned discrete numbers_.
+
+To calculate the probability of beliefs, then, we need to establish *how many times more we believe in one hypothesis over another*. One good test of this is how much you would be willing to bet on your belief.
+
+# Exercises
+1. What is the probability of rolling two six-sided dice and getting a value greater than seven?
+$\frac{15}{36}$
+2. What is the probability of rolling three six-sided dice and getting a value greater than seven?
+$\frac{181}{216}$
+3. You'll pay your friend \$30 if the Sox lose and your friend will pay you only \$5 if the Sox win. What's the probability you have intuitively assigned to the belief that the Red Sox will win?
+$\frac{6}{7}$ or $\sim86\%$
