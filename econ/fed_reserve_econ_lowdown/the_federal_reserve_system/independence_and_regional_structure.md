@@ -1,0 +1,73 @@
+# Independence, Accountability, and the Federal Reserve System
+
+The Federal Reserve System was created as the central bank of the United States when Congress passed, and President Woodrow Wilson signed, the Federal Reserve Act in 1913. The Federal Reserve Act, and the resulting institution, reflect two foundational beliefs—independence and accountability. Throughout its history, the Federal Reserve has felt the tension between these objectives—maintaining the independence necessary for sound policymaking while also remaining accountable to the electorate.
+
+Creating an independent central bank allows governments to insulate **monetary policy** from short-term political motives. Evidence suggests that countries with central banks with high levels of independence also have lower average inflation rates.
+
+# Representing Regional and National Interests
+In many ways (not surprisingly) the structure of the Federal Reserve System is similar to the structure of the U.S. government. The economic power of the Federal Reserve is not concentrated in a single, or few, hands in Washington, D.C., or on Wall Street. Rather, monetary policies are made by policymakers distributed across the country.
+
+The Federal Reserve balances national and local interests by having a centralized national Board of Governors and 12 decentralized regional Federal Reserve banks. The Board of Governors of the Federal Reserve System, located in Washington D.C., is the governing body of the Federal Reserve System. It is an agency of the U.S. federal government and directly accountable to Congress. The Board of Governors has broad oversight responsibilities for the operations and activities of the 12 Federal Reserve banks. As such, the Board of Governors ensures that national interests are represented. 
+
+The 12 Regional Reserve banks are the operating arm of the Federal Reserve System. They provide financial services, supervise and examine banks, and lend to depository institutions within their Federal Reserve District. The 12 Federal Reserve Districts span the country geographically and gather information about the businesses and communities in their respective region. This information is used when making monetary policy, to ensure that *regional* interests ("Main Street") are represented.
+
+# Checks and Balances
+The Federal Open Market Committee (FOMC) is the body within the Federal Reserve System that determines monetary policy for the country. The committee consists of up to 19 participants—seven Federal Reserve Board governors (if all positions are filled) and the presidents of the 12 Federal Reserve Banks. The governors are political appointees: They are nominated by the president of the United States and confirmed by the Senate. Governors are appointed to 14-year terms so that appointees serve beyond the tenure of the presidents who nominate them, reducing the likelihood that one president appoints a majority of the governors. Because the seven governors are political appointees, they are intended to be the most directly accountable to the public.
+
+The 12 Federal Reserve Bank presidents are not political appointees. Each Federal Reserve Bank has a [local board of directors](https://www.stlouisfed.org/about-us/leadership-governance/board-of-directors) whose members select its regional Bank president. All members of local boards of directors are subject to Board of Governors approval. And, appointments of Federal Reserve Bank presidents are also subject to Board of Governors approval. Because they are not political appointees, the presidents of the 12 Federal Reserve Banks are intended to be insulated from politics and to represent regional interests.
+
+The [FOMC consists of 12 voting members](https://www.stlouisfed.org/open-vault/2022/nov/fomc-voting-rotation-explained)—the seven members of the Board of Governors (if all positions are filled); the president of the Federal Reserve Bank of New York; and four of the remaining 11 Federal Reserve Bank presidents, who serve on a rotating basis. All 12 of the Federal Reserve Bank presidents attend FOMC meetings, report on economic conditions in their respective districts, and participate in the policy discussions, but only the five presidents designated as voting members at the time vote on policy decisions.
+
+This structure maintains centralized power but also makes sure that regional interests are represented in policy.
+
+# The Power of the Purse
+In the Federal Reserve Act, Congress gave the Federal Reserve the power to earn its own income. This income comes primarily from the interest the Fed earns on the government securities it acquires through **open market operations**. Because funding can be a way to wield influence, Congress did not give itself the "power of the purse" over the Fed. For example, if the Federal Reserve were dependent on Congress for funding, members of Congress could threaten to cut the Federal Reserve's budget to get the policy decisions they desired. The Fed does not keep all of its earning, however. After paying its expenses and legally mandated dividend payments to member banks, the Federal Reserve turns the rest of its earnings over to the U.S Treasury. For example, in 2019 the Fed sent the U.S. Treasury $54.9 billion.
+
+# Is the Fed Audited?
+The Board of Governors and the 12 Federal Reserve Banks undergo several levels of audit by the Government Accountability Office and outside independent auditors. To ensure transparency, the audited financial statements are available on the websites of the Board of Governors and the Federal Reserve Banks. In recent years, there has been an "audit the Fed" call supported by some legislators. The Fed already has regular traditional financial audits, so the intent here is something different. The call is for the Government Accountability Office to review the monetary policy decisions made by the FOMC. Other legislators, however, caution that such oversight could allow elected leaders to influence monetary policy—something Congress intended to guard against when they created an independent central bank.
+
+# The Fed is Accountable to Congress and the Public
+The U.S. Congress determines the goals of monetary policy (maximum employment, price stability, and moderate long-term interest rates), but it has given the Federal Reserve independence to achieve these goals.
+
+Along with that independence, the Federal Reserve is accountable to Congress for meeting its goals. Part of that accountability includes providing information to Congress and the public about its policy actions and the rationale for those decisions. The Fed does this in a number of ways. First, the Board of Governors prepares an extensive Monetary Policy Report twice per year, and the Chair testifies to Congress on those occasions. And, to provide transparency in the policymaking process, the FOMC issues a statement immediately following each of its eight annual FOMC meetings, publishes full minutes three weeks after each meeting, and publishes transcripts five years after each meeting. The Chair also holds a press conference after each FOMC meeting to explain (on behalf of the FOMC) its policy decisions. These press conferences are streamed live from the Federal Reserve Board of Governors website, and they are recorded, archived, and available to the public.
+
+In addition, four times per year, the FOMC provides projections (forecasts) for economic growth, unemployment, and inflation, as well as information about each policymaker's projection of the appropriate level of the federal funds rate.
+
+Further, Federal Reserve Board governors and Federal Reserve Bank presidents contribute to transparency by making frequent speeches about their policy perspectives. And, the Board of Governors and the Federal Reserve Banks all provide information, publications, and education materials on their websites to help inform the public about the structure and function of Federal Reserve System and its policy actions.
+
+# Representing Washington, Wall Street, and Main Street and the FOMC
+The Federal Reserve System balances national and local interests by having both a *central* authority with the Board of Governors and 12 regional Federal Reserve Banks. In this way, the economic power of the Federal Reserve is not concentrated in a single entity in Washington, D.C., or on Wall Street. Rather, monetary policy decisions include policymakers distributed across the country to ensure that Main Street has "a seat at the table." This structure allows the Fed to balance national and local interests, and it ensures that Washington, Wall Street, and Main Street are all represented in the policymaking process.
+
+## Washington
+The Board of Governors is a federal government agency located in the heart of Washington, D.C., in touch with the culture and processes that drive national government. As such, the Board ensures that Washington is represented at the FOMC table.
+
+## Wall Street
+The Federal Reserve Bank of New York (one of the 12 Federal Reserve Banks) is located in lower Manhattan, in the heart of the financial district. The New York Fed plays a key role in the implementation of monetary policy because it operates the open market trading desk, which is where the Federal Reserve System interacts with the U.S. financial system. The open market trading desk buys and sells Treasury securities and other assets to influence interest rates and manage the Fed's portfolio. The New York Fed ensures that input from Wall Street is represented in policy.
+
+## Main Street
+In a country as large and economically diverse as the United States, it is essential that policymakers receive input from beyond Washington and Wall Street. The distribution of the 12 Federal Reserve Banks—and their 24 branches—provides a structure for serving constituents and gathering information about the economic conditions throughout the country. Through the work of the Reserve Bank presidents, these 36 locations serve as the voice of Main Street and provide the FOMC with key information, or "economic intelligence," as they consider what policies best serve the national interest.
+
+# Preparing for the FOMC Meeting
+## Gathering District Information
+
+Each Federal Reserve Bank has a board of directors whose members provide broad oversight of Bank operations while also supplying vital information on regional economic and credit conditions. These directors report what they see in their business operations that might be useful for understanding economic conditions more broadly. Each Federal Reserve Bank's branch office also has a board of directors whose members provide similar information about their region and industry.
+
+All Reserve Bank presidents, are in a constant learning mode—gathering information about economic conditions. For example, they engage with people in the everyday business of life, whether neighbors are shopping for groceries or talking about their jobs. These conversations offer **qualitative** insights that might not be reflected in, or may be more nuanced than, **quantitative** national economic data or a formal presentation by a staff economist.
+
+Together, these voices of Main Street help inform the work of each Bank and the Federal Reserve System as a whole.
+
+## The Contribution of Staff Economists
+Federal Reserve Banks have staff economists who conduct research on many aspects of the economy and study policy-related issues. One of the important roles these staff economists play is helping their Bank president prepare for FOMC meetings. The fact that these economists do research in different areas adds nuance to policy discussions. A labor economist brings a different perspective to the discussion of the national economy than does an economist who focuses on the influence of international trade flows. In addition, economists bring their diverse personal perspectives, including those on age, gender, and race, as well as their own skills and cultural differences and experiences.
+
+The Bank's staff economists provide overviews of financial markets, international economic conditions, national economic conditions (using key data such as inflation, employment, unemployment, and GDP), and economic conditions in their District. The briefings also include a rich discussion of policy options centered around whether the current setting of the target range for the **federal funds rate** is appropriate, given current economic conditions and the economic outlook.
+
+## Representing Main Street at the FOMC Meeting
+The FOMC meets eight times per year in Washington, D.C., to make decisions about monetary policy. Each meeting includes some key components that allow Federal Reserve Bank presidents to ensure Main Street is represented at the policymaking table.
+
+## The Economic Situation
+The beginning of the meeting focuses on the economic situation: It's when FOMC participants receive briefings and present their views. First, FOMC participants receive briefings about national economic and financial conditions from Board of Governors staff economists and a review of **open market operations** from New York Fed staff economists. Then, the presidents and governors offer their assessments of and outlook on the economy. In their remarks, each Federal Reserve Bank president provides a summary of economic conditions in their District. The presidents usually refer to information from their District contacts or to research their staff has done in their remarks, ensuring that the District is represented.
+
+## Monetary Policy
+During the next part of the meeting, FOMC participants discuss appropriate policy and members vote. When discussing appropriate policy, Board of Governors staff present options for policy along with messaging that might occur in a press statement. Then, FOMC participants share their individual views and judgments on policy, how they expect policy to evolve over the medium term, and how the Committee's decision should be communicated.
+
+After the other Committee members have spoken, the Chair of the FOMC speaks and strives to form a consensus view for the Committee to support. While all participants take part in the discussion, only some participants vote: Members of the Board of Governors and the president of the Federal Reserve Bank of New York vote at every meeting, and four of the remaining 11 Bank presidents vote on a rotating basis. Even though only five of the 12 Reserve Bank presidents vote at any particular meeting, all of the presidents speak about what is happening in their Districts, and each one states their views on the appropriate setting of policy.
