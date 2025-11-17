@@ -1,0 +1,80 @@
+# Change Your Style
+
+Themes are a **different kind of component**: they act as the “finishing layer” of your visualization and focus entirely on **styling and presentation**. Typefaces, font styles, legends, backgrounds, grid lines, margins — all of these can be controlled with themes to make your charts look clean and polished without touching the underlying data.
+
+Themes let you give them a _cohesive look_ to make it publication-ready — simply swap a complete theme and or nudge a few elements to add a custom and personal touch.
+
+# Themes at a Glance
+The fastest way to style your plot is by applying a _complete theme_.
+
+A theme is simply a pre-built set of settings that control everything—from background colors and grid lines to text and spacing. With just one extra line of code, you get a clean, consistent style to build on.
+
+Here’s an example using the minimal theme:
+
+```{r}
+library(ggplot2)
+penguins <- read.csv("https://www.ggplot2-uncharted.com/data/palmerpenguins.csv")
+
+ggplot(penguins) +
+  aes(
+    x = flipper_length_mm,
+    y = bill_length_mm,
+    color = species
+  ) +
+  geom_point() +
+  ggtitle("Bill ratios of Pygoscelis penguins") +
+  theme_minimal()
+
+```
+Note: By default, every ggplot starts with the complete theme `theme_grey()`, which adds the classic “corporate grey” look. That’s a solid baseline — but it can feel a bit… well, _ggplot-y_.
+
+# World of Themes
+The `ggplot2` package comes with a set of complete themes to cover common needs.
+
+Beyond that, the community has created packages with additional ready-to-use themes, such as [ggthemes](https://jrnold.github.io/ggthemes/), [hrbrthemes](https://github.com/hrbrmstr/hrbrthemes), and [tvthemes](https://ryo-n7.github.io/tvthemes/).
+
+Some replicate the visual styles of well-known companies, newspapers, or software, while others take a more playful approach—referencing popular TV shows and other bits of pop culture.
+
+# Hello, Base
+When applying a complete theme, two arguments are especially handy: `base_size` and `base_family`. 
+They let you adjust the base settings in one go.
+
+* `base_size` sets the overall scale of all theme elements
+* `base_family` defines the typeface for all text elements
+
+Note: `base_line_size` and `base_rect_size` also exist, but as these scale with `base_size`,
+you'll rarely need to touch them.
+
+This way, you don’t need to repeat those settings for each element to change the overall readability and character of a plot: adjusting text size and typeface alone can already make a chart feel more professional, playful, or simply easier to read in context.
+
+```{r}
+ggplot(penguins) +
+  aes(x = bill_length_mm,
+      y = bill_depth_mm,
+      color = species) +
+  geom_point() +
+  ggtitle("Bill ratios of Pygoscelis penguins") +
+  theme_grey(
+    base_size = 15,
+    base_family = "monospace"
+  )
+```
+
+## Which Fonts Can I Use in `base_family`
+While you can only specify the **universal font families** in our sandboxes — `"sans"` (default), `"serif"`, and `"monospace"` — you’re not limited to these in your own setup. Any installed font can be applied to your ggplot themes using `base_family`.
+
+For example, the font we use for the body text of this course, `Domine`, can be installed locally and then referenced in your themes by its family name:
+
+```{r}
+ggplot(mpg, aes(x = class)) +
+  geom_bar() +
+  theme_minimal(base_family = "Domine")
+```
+
+We will talk about using non-default typefaces a lot more in upcoming lessons. For a detailed guide on using custom fonts in R and applying them in your plots, see the [Custom Themes lesson](https://www.ggplot2-uncharted.com/module2/custom-themes).
+
+# Going Down the Rabbit Hole
+Adjusting the base settings of a complete theme won’t affect colors or the layout of individual elements. That’s where the `theme()` function comes in: in the next lesson, you’ll learn how to fine-tune your plots in detail — from changing the typeface of a specific text element, to tweaking grid lines and margins, to moving the legend exactly where you want it.
+
+Still, complete themes, whether built into `ggplot2` or provided by extension packages, already give you a strong foundation. And if you prefer to keep things simple, you can stick with those plus a few base settings for clean, polished plots without much extra effort.
+
